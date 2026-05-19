@@ -3,6 +3,9 @@
     <BuildType Name="Default" />
     <Platform Name="Default" />
   </Configurations>
+  <Folder Name="/Base de Datos/">
+    <File Path="Tablas.sql" />
+  </Folder>
   <Project Path="Parques-Nacionales.ssmssqlproj" Type="4f2e2c19-372f-40d8-9fa7-9d2138c6997a">
     <Platform Project="?" />
     <Build Project="false" />
