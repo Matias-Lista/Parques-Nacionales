@@ -1,11 +1,3 @@
---CREACION BASE DE DATOS
-IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'ParquesNacionales')
-BEGIN
-	CREATE DATABASE ParquesNacionales
-	COLLATE Modern_Spanish_CS_AS
-END
-GO
-
 --DECLARACION TABLAS
 CREATE TABLE #visitasCSV (
     indice_tiempo DATE,
@@ -28,7 +20,7 @@ BULK INSERT #visitasCSV
 FROM 'E:\visitas-residentes-y-no-residentes.csv' 
 WITH (
     FIELDTERMINATOR = ',',
-    ROWTERMINATOR = '\t\n',       
+    ROWTERMINATOR = '0x090a',       
     CODEPAGE = '65001',          
     FIRSTROW = 2
 );
@@ -44,13 +36,12 @@ WITH (
 );
 GO
 
-SELECT * FROM #visitasRegionCSV
+--PROBAR DATOS
 SELECT * FROM #visitasCSV
+SELECT TOP 50 * FROM #visitasRegionCSV
 
 --ROLLBACK
-DROP TABLE IF EXISTS #visitasCSV
-GO
 DROP TABLE IF EXISTS #visitasRegionCSV
 GO
-DROP DATABASE IF EXISTS ParquesNacionales
+DROP TABLE IF EXISTS #visitasCSV
 GO
