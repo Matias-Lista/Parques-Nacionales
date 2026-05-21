@@ -14,8 +14,10 @@ GO
 DROP TABLE IF EXISTS Comercial.empresas;
 DROP TABLE IF EXISTS RRHH.guias;
 
+DROP TABLE IF EXISTS Administracion.entrada;
 DROP TABLE IF EXISTS Administracion.tarifa_entrada;
 DROP TABLE IF EXISTS Administracion.tipo_de_visitante;
+DROP TABLE IF EXISTS Administracion.tipos_de_parque;
 DROP TABLE IF EXISTS Administracion.parques;
 DROP TABLE IF EXISTS Administracion.localidades;
 DROP TABLE IF EXISTS Administracion.provincias;
@@ -102,13 +104,20 @@ CREATE TABLE Administracion.localidades (
 	CONSTRAINT FK_localidad_provincia FOREIGN KEY (provincia_id) REFERENCES Administracion.provincias(id)
 );
 
+CREATE TABLE Administracion.tipos_de_parque (
+	id INT PRIMARY KEY IDENTITY(1,1),
+	nombre varchar(100) NOT NULL
+);
+
 CREATE TABLE Administracion.parques (
 	id INT PRIMARY KEY IDENTITY(1,1),
+	tipo_parque_id INT NOT NULL,
 	localidad_id INT NOT NULL,
 	direccion VARCHAR(150) NOT NULL,
 	nombre VARCHAR(100) NOT NULL,
 	superficie_km_2 INT NOT NULL CHECK (superficie_km_2 > 0),
-	CONSTRAINT FK_parque_localidad FOREIGN KEY (localidad_id) REFERENCES Administracion.localidades(id)
+	CONSTRAINT FK_parque_localidad FOREIGN KEY (localidad_id) REFERENCES Administracion.localidades(id),
+	CONSTRAINT FK_parque_tipo FOREIGN KEY (tipo_parque_id) REFERENCES Administracion.tipos_de_parque(id)
 );
 
 -- Acá en vez de poner todos los campos como PRIMARY, voy a poner id autogenerado como primary, y el resto de campos sean UNIQUE e indexados.
@@ -120,4 +129,11 @@ CREATE TABLE Administracion.tarifa_entrada (
 	CONSTRAINT FK_tarifa_parque FOREIGN KEY (parque_id) REFERENCES Administracion.parques(id),
 	CONSTRAINT FK_tarifa_tipo FOREIGN KEY (tipo_visitante_id) REFERENCES Administracion.tipo_de_visitante(id),
 	CONSTRAINT UQ_tarifas_unicas UNIQUE (tipo_visitante_id, parque_id, tipo_fecha)
+);
+
+CREATE TABLE Administracion.entrada (
+	id INT PRIMARY KEY IDENTITY(1,1),
+	parque_id INT NOT NULL,
+	fecha_visita DATE DEFAULT getdate() NOT NULL,
+	CONSTRAINT FK_entrada_parque FOREIGN KEY (parque_id) REFERENCES Administracion.parques(id)
 );
