@@ -37,6 +37,13 @@ USE master
 DROP DATABASE IF EXISTS [ParquesNacionales];
 GO
 
+--CREACION BASE DE DATOS
+IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'ParquesNacionales')
+BEGIN
+	CREATE DATABASE ParquesNacionales
+	COLLATE Modern_Spanish_CS_AS
+END
+GO
 
 USE ParquesNacionales;
 GO
