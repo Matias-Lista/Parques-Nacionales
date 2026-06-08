@@ -1,12 +1,12 @@
 -- Eliminar Tablas
-DROP TABLE IF EXISTS forma_pago;
-DROP TABLE IF EXISTS divisa;
-DROP TABLE IF EXISTS tipo_articulo;
-DROP TABLE IF EXISTS tipo_fecha;
-DROP TABLE IF EXISTS tipo_visitante;
-DROP TABLE IF EXISTS tipo_parque;
-DROP TABLE IF EXISTS provincia;
-DROP TABLE IF EXISTS localidad;
+DROP TABLE IF EXISTS administracion.forma_pago;
+DROP TABLE IF EXISTS administracion.divisa;
+DROP TABLE IF EXISTS administracion.tipo_articulo;
+DROP TABLE IF EXISTS administracion.tipo_fecha;
+DROP TABLE IF EXISTS administracion.tipo_visitante;
+DROP TABLE IF EXISTS administracion.tipo_parque;
+DROP TABLE IF EXISTS administracion.provincia;
+DROP TABLE IF EXISTS administracion.localidad;
 DROP TABLE IF EXISTS administracion.parque;
 DROP TABLE IF EXISTS administracion.tarifa_articulo;
 DROP TABLE IF EXISTS administracion.ajuste;
@@ -68,46 +68,41 @@ GO
 
 --CREACION TABLAS
 --Paramétricas
-CREATE TABLE forma_pago (
+CREATE TABLE administracion.forma_pago (
     id INT PRIMARY KEY IDENTITY(1,1),
     descripcion VARCHAR(30)
 );
 
-CREATE TABLE divisa (
+CREATE TABLE administracion.divisa (
     id INT PRIMARY KEY IDENTITY(1,1),
     descripcion VARCHAR(30)
 );
 
-CREATE TABLE tipo_articulo ( --Se puede prescindir de ella, dado que solo son dos tipos.
+CREATE TABLE administracion.tipo_fecha (
     id INT PRIMARY KEY IDENTITY(1,1),
     descripcion VARCHAR(30)
 );
 
-CREATE TABLE tipo_fecha (
+CREATE TABLE administracion.tipo_visitante (
     id INT PRIMARY KEY IDENTITY(1,1),
     descripcion VARCHAR(30)
 );
 
-CREATE TABLE tipo_visitante (
-    id INT PRIMARY KEY IDENTITY(1,1),
-    descripcion VARCHAR(30)
-);
-
-CREATE TABLE tipo_parque (
+CREATE TABLE administracion.tipo_parque (
 	id INT PRIMARY KEY IDENTITY(1,1),
-	descripcion varchar(30) NOT NULL
+	descripcion VARCHAR(30) NOT NULL
 );
 
-CREATE TABLE provincia (
+CREATE TABLE administracion.provincia (
 	id INT PRIMARY KEY IDENTITY(1,1),
-	descripcion varchar(100) NOT NULL
+	descripcion VARCHAR(100) NOT NULL
 );
 
-CREATE TABLE localidad (
+CREATE TABLE administracion.localidad (
 	id INT PRIMARY KEY IDENTITY(1,1),
 	provincia_id INT NOT NULL,
-	descripcion varchar(100) NOT NULL,
-	CONSTRAINT FK_localidad_provincia FOREIGN KEY (provincia_id) REFERENCES provincia(id)
+	descripcion VARCHAR(100) NOT NULL,
+	CONSTRAINT FK_localidad_provincia FOREIGN KEY (provincia_id) REFERENCES administracion.provincia(id)
 );
 
 --Tablas comunes
@@ -118,31 +113,31 @@ CREATE TABLE administracion.parque (
 	direccion VARCHAR(150) NOT NULL,
 	nombre VARCHAR(100) NOT NULL,
 	superficie_km_2 INT NOT NULL CHECK (superficie_km_2 > 0),
-	CONSTRAINT FK_parque_localidad FOREIGN KEY (localidad_id) REFERENCES localidad(id),
-	CONSTRAINT FK_parque_tipo FOREIGN KEY (tipo_parque_id) REFERENCES tipo_parque(id)
+	CONSTRAINT FK_parque_localidad FOREIGN KEY (localidad_id) REFERENCES administracion.localidad(id),
+	CONSTRAINT FK_parque_tipo FOREIGN KEY (tipo_parque_id) REFERENCES administracion.tipo_parque(id)
 );
 
 CREATE TABLE administracion.tarifa_articulo (
     id INT PRIMARY KEY IDENTITY(1, 1),
     parque_id INT NOT NULL,
-    tipo_articulo_id INT NOT NULL,
+    tipo_articulo CHAR(1) NOT NULL CHECK (tipo_articulo IN ('E', 'T', 'A')), --El tipo de artículo ahora es un char.
     descripcion VARCHAR(50),
-    duracion INT NULL,
-    cupo INT NULL,
-    precio DECIMAL(10, 2),
-    CONSTRAINT FK_tarifa_parque FOREIGN KEY (parque_id) REFERENCES administracion.parque(id),
-    CONSTRAINT FK_tarifa_tipo FOREIGN KEY (tipo_articulo_id) REFERENCES tipo_articulo(id)
+    duracion INT NULL CHECK (tipo_articulo = 'T' AND (duracion <> NULL OR duracion > 0)),
+    cupo INT NULL CHECK (tipo_articulo = 'T' AND (cupo <> NULL OR cupo > 0)),
+    precio DECIMAL(10, 2) CHECK (precio >= 0),
+    CONSTRAINT FK_tarifa_parque FOREIGN KEY (parque_id) REFERENCES administracion.parque(id)
 );
 
 CREATE TABLE administracion.ajuste (
     id INT PRIMARY KEY IDENTITY(1, 1),
-    tipo_articulo_id INT NOT NULL,
+    parque_id INT NOT NULL, --Ajuste se vincula con parque, para saber los ajustes que se aplican en cada parque.
+    tipo_articulo CHAR(1) NOT NULL CHECK (tipo_articulo IN ('E', 'T', 'A')),
     tipo_visitante_id INT NOT NULL,
     tipo_fecha_id INT NOT NULL,
     porcentaje TINYINT,
-    CONSTRAINT FK_ajuste_articulo FOREIGN KEY (tipo_articulo_id) REFERENCES tipo_articulo(id),
-    CONSTRAINT FK_ajuste_visitante FOREIGN KEY (tipo_visitante_id) REFERENCES tipo_visitante(id),
-    CONSTRAINT FK_ajuste_fecha FOREIGN KEY (tipo_fecha_id) REFERENCES tipo_fecha(id)
+    CONSTRAINT FK_ajuste_parque FOREIGN KEY (parque_id) REFERENCES administracion.parque(id),
+    CONSTRAINT FK_ajuste_visitante FOREIGN KEY (tipo_visitante_id) REFERENCES administracion.tipo_visitante(id),
+    CONSTRAINT FK_ajuste_fecha FOREIGN KEY (tipo_fecha_id) REFERENCES administracion.tipo_fecha(id)
 );
 
 CREATE TABLE administracion.punto_venta (
@@ -159,13 +154,12 @@ CREATE TABLE rrhh.guardaparques (
     fecha_nacimiento DATE NOT NULL
 );
 
-
 -- CORREGIR: NOT NULL A FECHAS
 CREATE TABLE rrhh.asignacion_guardaparques (
     id INT PRIMARY KEY IDENTITY(1,1),
     parque_id INT NOT NULL,
     guardaparques_id INT NOT NULL,
-    fecha_ingreso DATE,
+    fecha_ingreso DATE NOT NULL,
     fecha_egreso DATE,
     motivo_egreso VARCHAR(200),
     CONSTRAINT FK_asignacion_parque FOREIGN KEY (parque_id) REFERENCES administracion.parque(id),
@@ -184,7 +178,7 @@ CREATE TABLE rrhh.autorizacion_guia (
     id INT PRIMARY KEY IDENTITY(1, 1),
     articulo_id INT NOT NULL,
     guia_id INT NOT NULL,
-    fecha_inicio DATE,
+    fecha_inicio DATE NOT NULL,
     fecha_fin DATE,
     CONSTRAINT FK_autorizacion_articulo FOREIGN KEY (articulo_id) REFERENCES administracion.tarifa_articulo(id),
     CONSTRAINT FK_autorizacion_guia FOREIGN KEY (guia_id) REFERENCES rrhh.guia(id)
@@ -209,8 +203,8 @@ CREATE TABLE comercial.concesion (
     parque_id INT NOT NULL,
     empresa_id INT NOT NULL,
     tipo_actividad_id INT NOT NULL,
-    fecha_firma DATE,
-    inicio_vigencia DATE,
+    fecha_firma DATE NOT NULL,
+    inicio_vigencia DATE NOT NULL,
     fin_vigencia DATE,
     canon_mensual DECIMAL (12, 2),
     CONSTRAINT FK_concesion_parque FOREIGN KEY (parque_id) REFERENCES administracion.parque(id),
@@ -225,7 +219,7 @@ CREATE TABLE comercial.cuota_canon (
     fecha_vencimiento DATE NOT NULL,
     fecha_pago DATE,
     CONSTRAINT FK_cuota_concesion FOREIGN KEY (concesion_id) REFERENCES comercial.concesion(id),
-    CONSTRAINT FK_cuota_pago FOREIGN KEY (forma_pago_id) REFERENCES forma_pago(id)
+    CONSTRAINT FK_cuota_pago FOREIGN KEY (forma_pago_id) REFERENCES administracion.forma_pago(id)
 );
 
 CREATE TABLE ventas.ticket_venta (
@@ -234,11 +228,11 @@ CREATE TABLE ventas.ticket_venta (
     forma_pago_id INT NOT NULL,
     divisa_id INT NOT NULL,
     cotizacion DECIMAL(15, 5),
-    fecha DATE,
+    fecha DATE DEFAULT GETDATE() NOT NULL,
     total DECIMAL(12, 2),
     CONSTRAINT FK_ticket_punto_venta FOREIGN KEY (punto_venta_id) REFERENCES administracion.punto_venta(id),
-    CONSTRAINT FK_ticket_pago FOREIGN KEY (forma_pago_id) REFERENCES forma_pago(id),
-    CONSTRAINT FK_ticket_divisa FOREIGN KEY (divisa_id) REFERENCES divisa(id)
+    CONSTRAINT FK_ticket_pago FOREIGN KEY (forma_pago_id) REFERENCES administracion.forma_pago(id),
+    CONSTRAINT FK_ticket_divisa FOREIGN KEY (divisa_id) REFERENCES administracion.divisa(id)
 );
 
 CREATE TABLE ventas.detalle_ticket (
@@ -255,21 +249,28 @@ CREATE TABLE ventas.detalle_ticket (
     CONSTRAINT FK_detalle_ajuste FOREIGN KEY (ajuste_id) REFERENCES administracion.ajuste(id)
 );
 
-
--- CORREGIR: MAL, no puede relacionarse a un ticket, porque varias personas distintas pueden participar de UNA MISMA ACTIVIDAD
-
--- TODO: Ver si podemos resolver guia como CHECK.
 CREATE TABLE ventas.actividad (
     id INT PRIMARY KEY IDENTITY(1, 1),
     tarifa_id INT NOT NULL,
     ticket_id INT NOT NULL,
     guia_id INT,
-    tipo_actividad CHAR(1) CHECK (tipo_actividad in ('T', 'A')),
+    tipo_actividad CHAR(1) NOT NULL CHECK (tipo_actividad IN ('T', 'A')),
     fecha_visita DATE DEFAULT GETDATE() NOT NULL,
     precio DECIMAL(10, 2),
+    CONSTRAINT CK_guia_por_tipo CHECK (
+        (tipo_actividad = 'A' AND guia_id IS NULL    ) OR
+        (tipo_actividad = 'T' AND guia_id IS NOT NULL)
+    ),
     CONSTRAINT FK_actividad_tarifa FOREIGN KEY (tarifa_id) REFERENCES administracion.tarifa_articulo(id),
     CONSTRAINT FK_actividad_ticket FOREIGN KEY (ticket_id) REFERENCES ventas.ticket_venta(id),
     CONSTRAINT FK_actividad_guia FOREIGN KEY (guia_id) REFERENCES rrhh.guia(id)
+);
+
+CREATE TABLE ventas.participa_en_actividad (
+    actividad_id INT NOT NULL, --OJO! Esta tabla puede tomar actividades que no sean tours.
+    ticket_id INT NOT NULL,
+    CONSTRAINT FK_en_actividad FOREIGN KEY (actividad_id) REFERENCES ventas.actividad(id),
+    CONSTRAINT FK_ticket_en FOREIGN KEY (ticket_id) REFERENCES ventas.ticket_venta(id)
 );
 
 CREATE TABLE ventas.entrada (
@@ -282,6 +283,6 @@ CREATE TABLE ventas.entrada (
     precio DECIMAL(10, 2),
 	CONSTRAINT FK_entrada_tarifa FOREIGN KEY (tarifa_id) REFERENCES administracion.tarifa_articulo(id),
     CONSTRAINT FK_entrada_ticket FOREIGN KEY (ticket_id) REFERENCES ventas.ticket_venta(id),
-    CONSTRAINT FK_entrada_fecha FOREIGN KEY (tipo_fecha_id) REFERENCES tipo_fecha(id),
-    CONSTRAINT FK_entrada_visitante FOREIGN KEY (tipo_visitante_id) REFERENCES tipo_visitante(id)
+    CONSTRAINT FK_entrada_fecha FOREIGN KEY (tipo_fecha_id) REFERENCES administracion.tipo_fecha(id),
+    CONSTRAINT FK_entrada_visitante FOREIGN KEY (tipo_visitante_id) REFERENCES administracion.tipo_visitante(id)
 );
