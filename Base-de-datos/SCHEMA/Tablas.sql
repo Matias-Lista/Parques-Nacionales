@@ -154,6 +154,7 @@ CREATE TABLE administracion.punto_venta (
 
 CREATE TABLE rrhh.guardaparques (
     id INT PRIMARY KEY IDENTITY(1,1),
+    cuil BIGINT UNIQUE NOT NULL CHECK (cuil between 20000000001 and 339999999999),
     nombre VARCHAR(30) NOT NULL,
     apellido VARCHAR(50) NOT NULL,
     fecha_nacimiento DATE NOT NULL
@@ -165,7 +166,7 @@ CREATE TABLE rrhh.asignacion_guardaparques (
     id INT PRIMARY KEY IDENTITY(1,1),
     parque_id INT NOT NULL,
     guardaparques_id INT NOT NULL,
-    fecha_ingreso DATE,
+    fecha_ingreso DATE NOT NULL,
     fecha_egreso DATE,
     motivo_egreso VARCHAR(200),
     CONSTRAINT FK_asignacion_parque FOREIGN KEY (parque_id) REFERENCES administracion.parque(id),
@@ -174,10 +175,10 @@ CREATE TABLE rrhh.asignacion_guardaparques (
 
 CREATE TABLE rrhh.guia (
 	id INT PRIMARY KEY IDENTITY(1,1),
-	dni CHAR(8) UNIQUE NOT NULL,
-	cuil CHAR(11) UNIQUE NOT NULL,
+	cuil BIGINT UNIQUE NOT NULL CHECK (cuil between 20000000001 and 339999999999),
 	nombre VARCHAR(100) NOT NULL,
-	apellido VARCHAR(200) NOT NULL
+	apellido VARCHAR(200) NOT NULL,
+    fecha_nacimiento DATE NOT NULL
 );
 
 CREATE TABLE rrhh.autorizacion_guia (
@@ -198,9 +199,9 @@ CREATE TABLE comercial.actividad_concesion (
 
 CREATE TABLE comercial.empresa (
 	id INT PRIMARY KEY IDENTITY(1,1),
-	cuit CHAR(11) UNIQUE NOT NULL,
+	cuit BIGINT UNIQUE NOT NULL CHECK (cuit between 20000000001 and 339999999999),
 	razon_social VARCHAR(100) NOT NULL,
-	direccion_legal VARCHAR(50) NOT NULL,
+	direccion_legal VARCHAR(100) NOT NULL,
 	comienzo_actividad DATE NOT NULL
 );
 
