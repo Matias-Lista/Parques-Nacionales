@@ -174,10 +174,10 @@ CREATE TABLE rrhh.asignacion_guardaparques (
 
 CREATE TABLE rrhh.guia (
 	id INT PRIMARY KEY IDENTITY(1,1),
-	dni CHAR(8) UNIQUE NOT NULL,
-	cuil CHAR(11) UNIQUE NOT NULL,
+	cuil BIGINT UNIQUE NOT NULL CHECK (cuit between 20000000001 and 339999999999),
 	nombre VARCHAR(100) NOT NULL,
-	apellido VARCHAR(200) NOT NULL
+	apellido VARCHAR(200) NOT NULL,
+    fecha_nacimiento DATE NOT NULL
 );
 
 CREATE TABLE rrhh.autorizacion_guia (
