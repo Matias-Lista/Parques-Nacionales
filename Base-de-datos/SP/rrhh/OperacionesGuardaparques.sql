@@ -96,3 +96,11 @@ BEGIN
     WHERE id = @id AND fecha_egreso IS NULL;
 END;
 GO
+
+CREATE OR ALTER PROCEDURE rrhh.EliminarAsignacionGuardaparques
+    @id INT
+AS
+BEGIN
+    DELETE FROM rrhh.guardaparques WHERE id = @id;
+END;
+GO

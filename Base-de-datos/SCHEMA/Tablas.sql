@@ -154,7 +154,7 @@ CREATE TABLE administracion.punto_venta (
 
 CREATE TABLE rrhh.guardaparques (
     id INT PRIMARY KEY IDENTITY(1,1),
-    cuil BIGINT UNIQUE NOT NULL CHECK (cuit between 20000000001 and 339999999999),
+    cuil BIGINT UNIQUE NOT NULL CHECK (cuil between 20000000001 and 339999999999),
     nombre VARCHAR(30) NOT NULL,
     apellido VARCHAR(50) NOT NULL,
     fecha_nacimiento DATE NOT NULL
@@ -175,7 +175,7 @@ CREATE TABLE rrhh.asignacion_guardaparques (
 
 CREATE TABLE rrhh.guia (
 	id INT PRIMARY KEY IDENTITY(1,1),
-	cuil BIGINT UNIQUE NOT NULL CHECK (cuit between 20000000001 and 339999999999),
+	cuil BIGINT UNIQUE NOT NULL CHECK (cuil between 20000000001 and 339999999999),
 	nombre VARCHAR(100) NOT NULL,
 	apellido VARCHAR(200) NOT NULL,
     fecha_nacimiento DATE NOT NULL
@@ -212,7 +212,7 @@ CREATE TABLE comercial.concesion (
     tipo_actividad_id INT NOT NULL,
     fecha_firma DATE,
     inicio_vigencia DATE,
-    fin_vigencia DATE  CHECK (inicio_vigencia < fin_vigencia),
+    fin_vigencia DATE,
     canon_mensual DECIMAL (12, 2),
     CONSTRAINT FK_concesion_parque FOREIGN KEY (parque_id) REFERENCES administracion.parque(id),
     CONSTRAINT FK_concesion_empresa FOREIGN KEY (empresa_id) REFERENCES comercial.empresa(id),
