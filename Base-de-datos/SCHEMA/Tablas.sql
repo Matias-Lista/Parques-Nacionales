@@ -198,7 +198,7 @@ CREATE TABLE comercial.actividad_concesion (
 
 CREATE TABLE comercial.empresa (
 	id INT PRIMARY KEY IDENTITY(1,1),
-	cuit INT UNIQUE NOT NULL CHECK (cuit between 20000000001 and 339999999999),
+	cuit BIGINT UNIQUE NOT NULL CHECK (cuit between 20000000001 and 339999999999),
 	razon_social VARCHAR(100) NOT NULL,
 	direccion_legal VARCHAR(100) NOT NULL,
 	comienzo_actividad DATE NOT NULL
