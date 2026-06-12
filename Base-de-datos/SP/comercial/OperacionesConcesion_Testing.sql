@@ -35,6 +35,10 @@ VALUES
 exec dbo.CrearActividadConcesion 'Turismo', 'Para actvidades de .... Turismo';
 
 SELECT * FROM comercial.actividad_concesion
+
+exec dbo.ModificarActividadConcesion @id=151, @nombre='Turismo aventura', @descripcion='Descripcion mas interesante';
+exec dbo.ModificarActividadConcesion @id=1, @nombre='Turismo aventura', @descripcion='Descripcion mas interesante';
+
 EXEC RegistrarEmpresa 201234567891, 'Empresa Super Real SRL', 'La oficina 123, CABA', '01-02-1990';
 
 exec dbo.CrearConcesion @id_parque = 1, @id_empresa = 1,
@@ -46,6 +50,16 @@ exec dbo.CrearConcesion @id_parque = 1, @id_empresa = 1,
 
 SELECT * FROM comercial.concesion
 SELECT * FROM comercial.cuota_canon -- Se crea un registro por cada mes de actividad.
+
+exec dbo.ModificarConcesion
+    @id_concesion = 2,
+    @id_parque = 1,
+    @id_empresa = 1,
+    @id_actividad_tipo = 1,
+    @fecha_firma = '2026-06-09', -- Un día después
+    @fecha_inicio = '2026-09-03', -- No cambia
+    @fecha_fin  = '2027-03-05', -- No cambia
+    @canon = 17500000;
 
 INSERT INTO forma_pago (descripcion) values ('Efectivo');
 
@@ -63,4 +77,4 @@ exec dbo.RegistrarPagoCuota @id_concesion = 2, @id_metodo_pago = 1, @fecha_pago 
 
 -- Elimino todo lo utilizado para los tests
 TRUNCATE TABLE comercial.cuota_canon;
-TRUNCATE TABLE comercial.concesion;
+DELETE FROM comercial.concesion;      -- Usamos DELETE porque está referenciada por una FK

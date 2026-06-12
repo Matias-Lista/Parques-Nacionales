@@ -211,7 +211,7 @@ CREATE TABLE comercial.concesion (
     tipo_actividad_id INT NOT NULL,
     fecha_firma DATE,
     inicio_vigencia DATE,
-    fin_vigencia DATE,
+    fin_vigencia DATE  CHECK (inicio_vigencia < fin_vigencia),
     canon_mensual DECIMAL (12, 2),
     CONSTRAINT FK_concesion_parque FOREIGN KEY (parque_id) REFERENCES administracion.parque(id),
     CONSTRAINT FK_concesion_empresa FOREIGN KEY (empresa_id) REFERENCES comercial.empresa(id),
