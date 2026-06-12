@@ -7,4 +7,17 @@
   <Folder Name="/Base de Datos/SCHEMA/">
     <File Path="Base-de-datos/SCHEMA/Tablas.sql" />
   </Folder>
+  <Folder Name="/Base de Datos/SP/" />
+  <Folder Name="/Base de Datos/SP/administracion/" />
+  <Folder Name="/Base de Datos/SP/comercial/">
+    <File Path="Base-de-datos/SP/comercial/OperacionesConcesion.sql" />
+    <File Path="Base-de-datos/SP/comercial/OperacionesConcesion_Testing.sql" />
+    <File Path="Base-de-datos/SP/comercial/OperacionesEmpresa.sql" />
+    <File Path="Base-de-datos/SP/comercial/OperacionesEmpresa_Testing.sql" />
+  </Folder>
+  <Folder Name="/Base de Datos/SP/rrhh/">
+    <File Path="Base-de-datos/SP/rrhh/OperacionesGuardaparques.sql" />
+    <File Path="Base-de-datos/SP/rrhh/OperacionesGuias.sql" />
+  </Folder>
+  <Folder Name="/Base de Datos/SP/ventas/" />
 </Solution>
