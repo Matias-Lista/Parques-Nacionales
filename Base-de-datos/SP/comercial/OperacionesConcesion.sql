@@ -124,6 +124,7 @@ BEGIN
     
     BEGIN TRY
         BEGIN TRANSACTION
+        SAVE  TRANSACTION ComienzoSP
 
         DECLARE @mensajeDeError VARCHAR(500) = CONCAT_WS(CHAR(10),
             IIF(NOT EXISTS (SELECT 1 FROM Administracion.Parques WHERE id = @id_parque), 'El parque no existe', NULL),
@@ -133,6 +134,7 @@ BEGIN
             IIF(@fecha_inicio IS NULL, 'La fecha de inicio debe estar definida', NULL),
             IIF(@fecha_fin IS NULL, 'La fecha de fin debe estar definida', NULL),
             IIF(@fecha_inicio >= @fecha_fin, 'La fecha de inicio debe ser anterior a la fecha de fin', NULL),
+            IIF(@fecha_firma >= @fecha_inicio, 'La fecha de firma debe ser anterior a la fecha de inicio', NULL),
             IIF(@canon IS NULL, 'El canon no puede ser nulo', NULL),
             IIF(@canon <= 0, 'El canon debe ser mayor a cero', NULL)
         );
@@ -157,7 +159,7 @@ BEGIN
     BEGIN CATCH
         IF @@TRANCOUNT > 0
         BEGIN
-            ROLLBACK TRANSACTION;
+            ROLLBACK TRANSACTION ComienzoSP;
         END;
 
         ;THROW;
@@ -181,6 +183,7 @@ BEGIN
     
     BEGIN TRY
         BEGIN TRANSACTION
+        SAVE  TRANSACTION ComienzoSP
         -- Validar entradas
         DECLARE @mensajeDeError VARCHAR(500) = CONCAT_WS(CHAR(10),
                 IIF(NOT EXISTS (SELECT 1 FROM Administracion.Parques WHERE id = @id_parque), 'El parque no existe', NULL),
@@ -208,16 +211,15 @@ BEGIN
         FROM Comercial.Concesiones
         WHERE id = @id_concesion
 
-        SET @mensajeDeError += IIF(@fecha_inicio_original IS NULL, 'No existe la concesion indicada', '');
-
-        -- Check 2: Ya comenzó ?
-        SET @mensajeDeError += IIF(@fecha_inicio_original <= GETDATE(), 'No se pueden modificar convenios iniciados.', '');
-
-        -- Check 3: Se pagó alguna cuota?
-        SET @mensajeDeError += IIF(
-            EXISTS (SELECT 1 FROM Comercial.CuotasCanon WHERE concesion_id = @id_concesion AND f_pago IS NOT NULL),
-            'No se pueden modificar convenios con cuotas pagas.',
-            '');
+        SET @mensajeDeError = CONCAT_WS(CHAR(10),
+            IIF(@fecha_inicio_original IS NULL, 'No existe la concesion indicada', NULL),
+            -- Check 2: Ya comenzó ?
+            IIF(@fecha_inicio_original <= GETDATE(), 'No se pueden modificar convenios iniciados.', NULL),
+            -- Check 3: Se pagó alguna cuota?
+            IIF(
+                EXISTS (SELECT 1 FROM Comercial.CuotasCanon WHERE concesion_id = @id_concesion AND f_pago IS NOT NULL),
+                'No se pueden modificar convenios con cuotas pagas.',
+                NULL));
 
         IF (LEN(@mensajeDeError) > 0)
         BEGIN
@@ -254,7 +256,7 @@ BEGIN
     
         IF @@TRANCOUNT > 0
         BEGIN
-            ROLLBACK TRANSACTION;
+            ROLLBACK TRANSACTION ComienzoSP;
         END;
 
         ;THROW;
@@ -274,6 +276,7 @@ BEGIN
         -- y que aún no pagaron ninguna cuota.
     BEGIN TRY
         BEGIN TRANSACTION
+        SAVE TRANSACTION ComienzoSP
         DECLARE @fecha_inicio DATE;
         SELECT
             @fecha_inicio = f_inicio_vigencia
@@ -304,7 +307,7 @@ BEGIN
     BEGIN CATCH
         IF @@TRANCOUNT > 0
         BEGIN
-            ROLLBACK TRANSACTION;
+            ROLLBACK TRANSACTION ComienzoSP;
         END;
 
         ;THROW;
@@ -323,21 +326,21 @@ BEGIN
     -- Defino este booleano para poder presentar un unico mensaje de error.
     DECLARE @concesionExiste BIT = IIF(EXISTS (SELECT 1 FROM Comercial.Concesiones WHERE id = @id_concesion), 1, 0 );
     
-    DECLARE @mensajeDeError VARCHAR(500) = CONCAT_WS(CHAR(10),
-        IIF(@concesionExiste = 1, 'La concesion no existe', NULL),
-        IIF(@id_metodo_pago IS NULL, 'Se debe indicar un metodo de pago.', NULL),
-        IIF(EXISTS (SELECT 1 FROM Administracion.FormasDePago WHERE id = @id_metodo_pago), 'El método de pago no existe', NULL)
-    );
-
-    IF (@concesionExiste = 0) -- Si la concesion no existe no compruebo la última cuota pendiente
-    BEGIN
-        ;THROW 50000, @mensajeDeError, 1;
-    END;
-
     if @fecha_pago is null
     BEGIN 
         SET @fecha_pago = GETDATE();
     END
+
+    DECLARE @mensajeDeError VARCHAR(500) = CONCAT_WS(CHAR(10),
+        IIF(@concesionExiste = 0, 'La concesion no existe', NULL),
+        IIF(@id_metodo_pago IS NULL, 'Se debe indicar un metodo de pago.', NULL),
+        IIF(NOT EXISTS (SELECT 1 FROM Administracion.FormasDePago WHERE id = @id_metodo_pago), 'El método de pago no existe', NULL)
+    );
+
+    IF (@concesionExiste = 0) -- Si la concesion no existe no compruebo la última cuota pendiente, ni el ultimo pago
+    BEGIN
+        ;THROW 50000, @mensajeDeError, 1;
+    END;
 
     -- Para registrar el pago de una cuota, primero hay que ver si a la concesion
     -- le queda AL MENOS una cuota pendiente.
@@ -347,9 +350,23 @@ BEGIN
     FROM Comercial.CuotasCanon
     WHERE f_pago IS NULL 
           AND concesion_id = @id_concesion
-    ORDER BY f_pago ASC); -- Obtiene la cuota más vieja
+    ORDER BY f_pago ASC); -- Obtiene la cuota más vieja sin pagar
 
-    SET @mensajeDeError += IIF(@cuota_id IS NULL, 'La concesión no posee cuotas pendientes.', '');
+    DECLARE @fechaUltimoPago DATE;
+    SET @fechaUltimoPago = (SELECT TOP 1 f_pago 
+            FROM Comercial.CuotasCanon 
+            WHERE concesion_id = @id_concesion 
+                    AND f_pago IS NOT NULL
+            ORDER BY f_pago ASC); -- Obtiene la última fecha de pago de una cuota (si se hizo alguno)
+
+    SET @mensajeDeError = CONCAT_WS(CHAR(10),
+            IIF(@cuota_id IS NULL, 'La concesión no posee cuotas pendientes.', NULL),
+            IIF(@fechaUltimoPago > @fecha_pago, 'La fecha de pago no puede ser anterior, al último pago.', NULL));
+
+    IF (LEN(@mensajeDeError) > 0) -- Si la concesion no existe no compruebo la última cuota pendiente, ni el ultimo pago
+    BEGIN
+        ;THROW 50000, @mensajeDeError, 1;
+    END;
 
     UPDATE Comercial.CuotasCanon 
     SET forma_pago_id = @id_metodo_pago, f_pago = @fecha_pago
