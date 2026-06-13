@@ -181,7 +181,6 @@ BEGIN
     );
 END;
 
--- CORREGIR: NOT NULL A FECHAS
 IF OBJECT_ID('RRHH.AsignacionesDeGuardaparques', 'U') IS NULL
 BEGIN
     CREATE TABLE RRHH.AsignacionesDeGuardaparques (
@@ -191,7 +190,7 @@ BEGIN
         f_ingreso DATE NOT NULL,
         f_egreso DATE,
         f_motivo_egreso VARCHAR(200),
-        CONSTRAINT FK_Asignaciones_Parques FOREIGN KEY (parque_id) REFERENCES Administracion.Parques(id),
+        CONSTRAINT FK_AsignacionesGuardaparques_Parques FOREIGN KEY (parque_id) REFERENCES Administracion.Parques(id),
         CONSTRAINT FK_Asignaciones_Guardaparques FOREIGN KEY (guardaparques_id) REFERENCES RRHH.Guardaparques(id)
     );
 END;
@@ -204,6 +203,20 @@ BEGIN
     	nombre VARCHAR(100) NOT NULL,
     	apellido VARCHAR(200) NOT NULL,
         f_nacimiento DATE NOT NULL
+    );
+END;
+
+IF OBJECT_ID('RRHH.AsignacionesDeGuias', 'U') IS NULL
+BEGIN
+    CREATE TABLE RRHH.AsignacionesDeGuias (
+        id INT PRIMARY KEY IDENTITY(1,1),
+        parque_id INT NOT NULL,
+        guia_id INT NOT NULL,
+        f_ingreso DATE NOT NULL,
+        f_egreso DATE,
+        f_motivo_egreso VARCHAR(200),
+        CONSTRAINT FK_AsignacionesGuias_Parques FOREIGN KEY (parque_id) REFERENCES Administracion.Parques(id),
+        CONSTRAINT FK_Asignaciones_Guia FOREIGN KEY (guia_id) REFERENCES RRHH.Guias(id)
     );
 END;
 
@@ -240,6 +253,7 @@ BEGIN
     );
 END;
 
+-- TODO: Regla de negocio, al menos dos semanas de concesion ?
 IF OBJECT_ID('Comercial.Concesiones', 'U') IS NULL
 BEGIN
     CREATE TABLE Comercial.Concesiones (
