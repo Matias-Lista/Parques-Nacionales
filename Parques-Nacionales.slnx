@@ -5,10 +5,14 @@
   </Configurations>
   <Folder Name="/Base de Datos/" />
   <Folder Name="/Base de Datos/SCHEMA/">
+    <File Path="Base-de-datos/SCHEMA/Eliminar_todo.sql" />
     <File Path="Base-de-datos/SCHEMA/Tablas.sql" />
   </Folder>
   <Folder Name="/Base de Datos/SP/" />
-  <Folder Name="/Base de Datos/SP/administracion/" />
+  <Folder Name="/Base de Datos/SP/administracion/">
+    <File Path="Base-de-datos/SP/administracion/OperacionesAdministracion.sql" />
+    <File Path="Base-de-datos/SP/administracion/OperacionesAdministracionTesting.sql" />
+  </Folder>
   <Folder Name="/Base de Datos/SP/comercial/">
     <File Path="Base-de-datos/SP/comercial/OperacionesConcesion.sql" />
     <File Path="Base-de-datos/SP/comercial/OperacionesConcesion_Testing.sql" />
