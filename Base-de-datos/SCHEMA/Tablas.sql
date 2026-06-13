@@ -18,16 +18,29 @@ GO
 -- Comercial (empresas, concesiones)
 
 -- TODO: Podemos usar EXEC() para crear los schemas solo si no existen?
-CREATE SCHEMA Ventas;
+
+IF SCHEMA_ID('Ventas') IS NULL
+BEGIN
+    EXEC('CREATE SCHEMA Ventas;');
+END
 GO
 
-CREATE SCHEMA Comercial;
+IF SCHEMA_ID('Comercial') IS NULL
+BEGIN
+    EXEC('CREATE SCHEMA Comercial;');
+END
 GO
 
-CREATE SCHEMA RRHH;
+IF SCHEMA_ID('RRHH') IS NULL
+BEGIN
+    EXEC('CREATE SCHEMA RRHH;');
+END
 GO
 
-CREATE SCHEMA Administracion;
+IF SCHEMA_ID('Administracion') IS NULL
+BEGIN
+    EXEC('CREATE SCHEMA Administracion;');
+END
 GO
 
 --CREACION TABLAS
