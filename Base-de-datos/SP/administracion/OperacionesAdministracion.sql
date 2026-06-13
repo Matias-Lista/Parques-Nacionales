@@ -3,7 +3,7 @@ GO
 
 --INGRESAR DATOS
 --Ingresar registros paramétricas.
-CREATE OR ALTER PROCEDURE Administracion.IngresarFormaPago 
+CREATE OR ALTER PROCEDURE Administracion.IngresarFormasDePago 
     @descripcion VARCHAR(30) = NULL
 AS
 BEGIN
@@ -51,7 +51,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.IngresarTipoFecha
+CREATE OR ALTER PROCEDURE Administracion.IngresarTiposDeFecha
     @descripcion VARCHAR(30) = NULL
 AS
 BEGIN
@@ -75,7 +75,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.IngresarTipoVisitante 
+CREATE OR ALTER PROCEDURE Administracion.IngresarTiposDeVisitante 
     @descripcion VARCHAR(30) = NULL
 AS
 BEGIN
@@ -99,7 +99,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.IngresarTipoParque
+CREATE OR ALTER PROCEDURE Administracion.IngresarTiposDeParque
     @descripcion VARCHAR(30) = NULL
 AS
 BEGIN
@@ -123,7 +123,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.IngresarProvincia
+CREATE OR ALTER PROCEDURE Administracion.IngresarProvincias
     @nombre VARCHAR(100) = NULL
 AS
 BEGIN
@@ -132,7 +132,7 @@ BEGIN
     --CAMPOS NULOS
     IF @nombre IS NULL
     BEGIN
-	RAISERROR('Ingrese un NOMBRE válido para la provincia.', 16, 1)
+	RAISERROR('Ingrese un NOMBRE válido para la Provincias.', 16, 1)
         RETURN
     END
 
@@ -148,16 +148,16 @@ END;
 GO
 
 CREATE OR ALTER PROCEDURE Administracion.IngresarLocalidad
-    @provincia_id INT = NULL,
+    @provincias_id INT = NULL,
     @nombre VARCHAR(100) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    --PROVINCIA
-    IF @provincia_id IS NULL OR NOT EXISTS (SELECT id FROM Administracion.Provincias WHERE @provincia_id = id)
+    --Provincias
+    IF @provincias_id IS NULL OR NOT EXISTS (SELECT id FROM Administracion.Provincias WHERE @provincias_id = id)
     BEGIN
-        RAISERROR('La PROVINCIA no existe o es inválida.', 16, 1)
+        RAISERROR('La LOCALIDAD no existe o es inválida.', 16, 1)
         RETURN
     END
 
@@ -170,7 +170,7 @@ BEGIN
 
     --(TRY-CATCH)
     BEGIN TRY
-        INSERT INTO Administracion.Localidades (provincia_id, descripcion) VALUES (@provincia_id, @nombre)
+        INSERT INTO Administracion.Localidades (provincias_id, descripcion) VALUES (@provincias_id, @nombre)
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -179,9 +179,9 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.IngresarParque
-    @tipo_parque_id INT = NULL,
-	@localidad_id INT = NULL,
+CREATE OR ALTER PROCEDURE Administracion.IngresarParques
+    @tipos_parque_id INT = NULL,
+	@localidades_id INT = NULL,
 	@direccion VARCHAR(150) = NULL,
 	@nombre VARCHAR(100) = NULL,
 	@superficie INT = NULL
@@ -190,14 +190,14 @@ BEGIN
     SET NOCOUNT ON;
 
     --TIPO PARQUE
-    IF @tipo_parque_id IS NULL OR NOT EXISTS (SELECT id FROM Administracion.TiposDeParque WHERE @tipo_parque_id = id)
+    IF @tipos_parque_id IS NULL OR NOT EXISTS (SELECT id FROM Administracion.TiposDeParque WHERE @tipos_parque_id = id)
     BEGIN
         RAISERROR('El TIPO de PARQUE no existe o es inválido.', 16, 1)
         RETURN
     END
 
     --LOCALIDAD
-    IF @localidad_id IS NULL OR NOT EXISTS (SELECT id FROM Administracion.Localidades WHERE @localidad_id = id)
+    IF @localidades_id IS NULL OR NOT EXISTS (SELECT id FROM Administracion.Localidades WHERE @localidades_id = id)
     BEGIN
         RAISERROR('La LOCALIDAD no existe o es inválida.', 16, 1)
         RETURN
@@ -210,11 +210,18 @@ BEGIN
         RETURN
     END
 
+    --SUPERFICIE
+    IF @superficie <= 0
+    BEGIN
+	RAISERROR('Ingrese una superficie mayor que cero.', 16, 1)
+        RETURN
+    END
+
     --(TRY-CATCH)
     BEGIN TRY
-        INSERT INTO Administracion.Parques (tipo_parque_id, localidad_id, direccion, nombre, superficie_km_2) VALUES (
-        @tipo_parque_id, 
-        @localidad_id, 
+        INSERT INTO Administracion.Parques (tipos_parque_id, localidades_id, direccion, nombre, superficie_km_2) VALUES (
+        @tipos_parque_id, 
+        @localidades_id, 
         @direccion,
         @nombre,
         @superficie
@@ -227,9 +234,9 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.IngresarTarifaArticulo
-    @parque_id INT = NULL,
-    @tipo_articulo CHAR(1) = NULL,
+CREATE OR ALTER PROCEDURE Administracion.IngresarTarifasDeArticulo
+    @parques_id INT = NULL,
+    @tipos_articulo CHAR(1) = NULL,
     @descripcion VARCHAR(50) = NULL,
     @duracion INT = NULL,
     @cupo INT = NULL,
@@ -239,14 +246,14 @@ BEGIN
     SET NOCOUNT ON;
 
     --PARQUE
-    IF @parque_id IS NULL OR NOT EXISTS (SELECT id FROM Administracion.Parques WHERE @parque_id = id)
+    IF @parques_id IS NULL OR NOT EXISTS (SELECT id FROM Administracion.Parques WHERE @parques_id = id)
     BEGIN
         RAISERROR('El PARQUE no existe o es inválido.', 16, 1)
         RETURN
     END
 
     --TIPO ARTICULO
-    IF @tipo_articulo IS NULL OR @tipo_articulo NOT IN ('E', 'A', 'T')
+    IF @tipos_articulo IS NULL OR @tipos_articulo NOT IN ('E', 'A', 'T')
     BEGIN
         RAISERROR('El TIPO de ARTÍCULO no existe o es inválido.', 16, 1)
         RETURN
@@ -259,12 +266,14 @@ BEGIN
         RETURN
     END
 
-    IF @tipo_articulo = 'T' AND (@duracion IS NULL OR @cupo IS NULL OR @duracion <= 0 OR @cupo <= 0)
+    --TOUR SIN DURACION O CUPO
+    IF @tipos_articulo = 'T' AND (@duracion IS NULL OR @cupo IS NULL OR @duracion <= 0 OR @cupo <= 0)
     BEGIN
 	RAISERROR('El TOUR no puede tener una DURACIÓN o CUPO nulos.', 16, 1)
         RETURN
     END
 
+    --PRECIO
     IF @precio IS NULL OR @precio < 0 --El artículo podría ser GRATUITO, ojo!
     BEGIN
 	RAISERROR('Ingrese un PRECIO válido.', 16, 1)
@@ -273,9 +282,9 @@ BEGIN
 
     --(TRY-CATCH)
     BEGIN TRY
-        INSERT INTO Administracion.TarifasDeArticulo (parque_id, tipo_articulo, descripcion, duracion, cupo, precio) VALUES (
-        @parque_id,
-        @tipo_articulo,
+        INSERT INTO Administracion.TarifasDeArticulo (parques_id, tipos_articulo, descripcion, duracion, cupo, precio) VALUES (
+        @parques_id,
+        @tipos_articulo,
         @descripcion,
         @duracion,
         @cupo,
@@ -289,39 +298,39 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.IngresarAjuste
-    @parque_id INT = NULL,
-    @tipo_articulo CHAR(1) = NULL,
-    @tipo_visitante_id INT = NULL,
-    @tipo_fecha_id INT = NULL,
+CREATE OR ALTER PROCEDURE Administracion.IngresarAjustes
+    @parques_id INT = NULL,
+    @tipos_articulo CHAR(1) = NULL,
+    @tipos_visitante_id INT = NULL,
+    @tipos_fecha_id INT = NULL,
     @porcentaje TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
 
     --PARQUE
-    IF @parque_id IS NULL OR NOT EXISTS (SELECT id FROM Administracion.Parques WHERE @parque_id = id)
+    IF @parques_id IS NULL OR NOT EXISTS (SELECT id FROM Administracion.Parques WHERE @parques_id = id)
     BEGIN
         RAISERROR('El PARQUE no existe o es inválido.', 16, 1)
         RETURN
     END
 
     --TIPO ARTICULO
-    IF @tipo_articulo IS NULL OR @tipo_articulo NOT IN ('E', 'A', 'T')
+    IF @tipos_articulo IS NULL OR @tipos_articulo NOT IN ('E', 'A', 'T')
     BEGIN
         RAISERROR('El TIPO de ARTÍCULO no existe o es inválido.', 16, 1)
         RETURN
     END
 
     --TIPO VISITANTE    
-    IF @tipo_visitante_id IS NULL OR NOT EXISTS (SELECT id FROM Administracion.TiposDeVisitante WHERE @tipo_visitante_id = id)
+    IF @tipos_visitante_id IS NULL OR NOT EXISTS (SELECT id FROM Administracion.TiposDeVisitante WHERE @tipos_visitante_id = id)
     BEGIN
         RAISERROR('El TIPO de VISITANTE no existe o es inválido.', 16, 1)
         RETURN
     END
 
     --TIPO FECHA
-    IF @tipo_fecha_id IS NULL OR NOT EXISTS (SELECT id FROM Administracion.TiposDeFecha WHERE @tipo_fecha_id = id)
+    IF @tipos_fecha_id IS NULL OR NOT EXISTS (SELECT id FROM Administracion.TiposDeFecha WHERE @tipos_fecha_id = id)
     BEGIN
         RAISERROR('El TIPO de FECHA no existe o es inválido.', 16, 1)
         RETURN
@@ -336,11 +345,11 @@ BEGIN
 
     --(TRY-CATCH)
     BEGIN TRY
-        INSERT INTO Administracion.Ajustes (parque_id, tipo_articulo, tipo_visitante_id, tipo_fecha_id, porcentaje) VALUES (
-        @parque_id,
-        @tipo_articulo,
-        @tipo_visitante_id,
-        @tipo_fecha_id,
+        INSERT INTO Administracion.Ajustes (parques_id, tipos_articulo, tipos_visitante_id, tipos_fecha_id, porcentaje) VALUES (
+        @parques_id,
+        @tipos_articulo,
+        @tipos_visitante_id,
+        @tipos_fecha_id,
         @porcentaje
         )
     END TRY
@@ -351,15 +360,15 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.IngresarPuntoVenta
-    @parque_id INT = NULL,
+CREATE OR ALTER PROCEDURE Administracion.IngresarPuntosDeVenta
+    @parques_id INT = NULL,
     @descripcion VARCHAR(30) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     
     --PARQUE
-    IF @parque_id IS NULL OR NOT EXISTS (SELECT id FROM Administracion.Parques WHERE @parque_id = id)
+    IF @parques_id IS NULL OR NOT EXISTS (SELECT id FROM Administracion.Parques WHERE @parques_id = id)
     BEGIN
         RAISERROR('El PARQUE no existe o es inválido.', 16, 1)
         RETURN
@@ -367,8 +376,8 @@ BEGIN
 
     --(TRY-CATCH)
     BEGIN TRY
-        INSERT INTO Administracion.PuntosDeVenta (parque_id, descripcion) VALUES (
-                @parque_id,
+        INSERT INTO Administracion.PuntosDeVenta (parques_id, descripcion) VALUES (
+                @parques_id,
                 @descripcion
                 )
     END TRY
@@ -381,7 +390,7 @@ GO
 
 /*------------------------------------------------------------------------------------------------------------*/
 --ACTUALIZAR DATOS
-CREATE OR ALTER PROCEDURE Administracion.ActualizarFormaPago
+CREATE OR ALTER PROCEDURE Administracion.ActualizarFormasDePago
     @id INT = NULL,
     @descripcion_vieja VARCHAR(30) = NULL,
     @descripcion_nueva VARCHAR(30) = NULL
@@ -396,7 +405,10 @@ BEGIN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.FormasDePago WHERE @id = id OR @descripcion_vieja = descripcion)
+    DECLARE @id_real_fdp INT
+    SELECT @id_real_fdp = id FROM Administracion.FormasDePago WHERE @id = id OR @descripcion_vieja = descripcion
+
+    IF @id_real_fdp IS NULL
     BEGIN
         RAISERROR('La FORMA DE PAGO no existe o es inválida.', 16, 1)
         RETURN
@@ -406,7 +418,7 @@ BEGIN
     BEGIN TRY
         UPDATE Administracion.FormasDePago 
         SET descripcion = ISNULL(@descripcion_nueva, descripcion) 
-        WHERE @id = id OR @descripcion_vieja = descripcion
+        WHERE id = @id_real_fdp
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -430,7 +442,10 @@ BEGIN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.Divisas WHERE @id = id OR @descripcion_vieja = descripcion)
+    DECLARE @id_real_div INT
+    SELECT @id_real_div = id FROM Administracion.Divisas WHERE @id = id OR @descripcion_vieja = descripcion
+
+    IF @id_real_div IS NULL
     BEGIN
         RAISERROR('La Divisas no existe o es inválida.', 16, 1)
         RETURN
@@ -440,7 +455,7 @@ BEGIN
     BEGIN TRY
         UPDATE Administracion.Divisas 
         SET descripcion = ISNULL(@descripcion_nueva, descripcion) 
-        WHERE @id = id OR @descripcion_vieja = descripcion
+        WHERE id = @id_real_div
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -449,7 +464,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.ActualizarTipoFecha
+CREATE OR ALTER PROCEDURE Administracion.ActualizarTiposDeFecha
     @id INT = NULL,
     @descripcion_vieja VARCHAR(30) = NULL,
     @descripcion_nueva VARCHAR(30) = NULL
@@ -464,7 +479,10 @@ BEGIN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.TiposDeFecha WHERE @id = id OR @descripcion_vieja = descripcion)
+    DECLARE @id_real_tdf INT
+    SELECT @id_real_tdf = id FROM Administracion.TiposDeFecha WHERE @id = id OR @descripcion_vieja = descripcion
+
+    IF @id_real_tdf IS NULL
     BEGIN
         RAISERROR('El TIPO DE FECHA no existe o es inválida.', 16, 1)
         RETURN
@@ -474,7 +492,7 @@ BEGIN
     BEGIN TRY
         UPDATE Administracion.TiposDeFecha 
         SET descripcion = ISNULL(@descripcion_nueva, descripcion) 
-        WHERE @id = id OR @descripcion_vieja = descripcion
+        WHERE id = @id_real_tdf
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -483,7 +501,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.ActualizarTipoParque
+CREATE OR ALTER PROCEDURE Administracion.ActualizarTiposDeVisitante
     @id INT = NULL,
     @descripcion_vieja VARCHAR(30) = NULL,
     @descripcion_nueva VARCHAR(30) = NULL
@@ -498,7 +516,47 @@ BEGIN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.TiposDeParque WHERE @id = id OR @descripcion_vieja = descripcion)
+    DECLARE @id_real_tdv INT
+    SELECT @id_real_tdv = id FROM Administracion.TiposDeVisitante WHERE @id = id OR @descripcion_vieja = descripcion
+
+    IF @id_real_tdv IS NULL
+    BEGIN
+        RAISERROR('El TIPO DE VISITANTE no existe o es inválida.', 16, 1)
+        RETURN
+    END
+
+    --(TRY-CATCH) 
+    BEGIN TRY
+        UPDATE Administracion.TiposDeVisitante 
+        SET descripcion = ISNULL(@descripcion_nueva, descripcion) 
+        WHERE id = @id_real_tdv
+    END TRY
+    BEGIN CATCH
+        DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
+	RAISERROR('Error al actualizar TIPO DE VISITANTE: %s', 16, 1, @error)
+    END CATCH
+END
+GO
+
+CREATE OR ALTER PROCEDURE Administracion.ActualizarTiposDeParque
+    @id INT = NULL,
+    @descripcion_vieja VARCHAR(30) = NULL,
+    @descripcion_nueva VARCHAR(30) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    --CAMPOS NULOS
+    IF (@id IS NULL AND @descripcion_vieja IS NULL) OR @descripcion_nueva IS NULL
+    BEGIN
+	    RAISERROR('NO ingrese campos NULOS.', 16, 1)
+        RETURN
+    END
+
+    --PARÁMETROS INEXISTENTES
+    DECLARE @idRealTDP INT
+    SELECT @idRealTDP = id FROM Administracion.TiposDeParque WHERE @id = id OR @descripcion_vieja = descripcion
+
+    IF @idRealTDP IS NULL
     BEGIN
         RAISERROR('El TIPO DE PARQUE no existe o es inválida.', 16, 1)
         RETURN
@@ -508,7 +566,7 @@ BEGIN
     BEGIN TRY
         UPDATE Administracion.TiposDeParque 
         SET descripcion = ISNULL(@descripcion_nueva, descripcion) 
-        WHERE @id = id OR @descripcion_vieja = descripcion
+        WHERE id = @idRealTDP
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -517,7 +575,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.ActualizarProvincia
+CREATE OR ALTER PROCEDURE Administracion.ActualizarProvincias
     @id INT = NULL,
     @descripcion_vieja VARCHAR(100) = NULL,
     @descripcion_nueva VARCHAR(100) = NULL
@@ -532,9 +590,12 @@ BEGIN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.Provincias WHERE @id = id OR @descripcion_vieja = descripcion)
+    DECLARE @idRealProv INT
+    SELECT @idRealProv = id FROM Administracion.Provincias WHERE @id = id OR @descripcion_vieja = descripcion
+
+    IF @idRealProv IS NULL
     BEGIN
-        RAISERROR('La PROVINCIA no existe o es inválida.', 16, 1)
+        RAISERROR('La Provincias no existe o es inválida.', 16, 1)
         RETURN
     END
 
@@ -542,32 +603,35 @@ BEGIN
     BEGIN TRY
         UPDATE Administracion.Provincias 
         SET descripcion = ISNULL(@descripcion_nueva, descripcion) 
-        WHERE @id = id OR @descripcion_vieja = descripcion
+        WHERE id = @idRealProv
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
-	RAISERROR('Error al actualizar PROVINCIA: %s', 16, 1, @error)
+	RAISERROR('Error al actualizar Provincias: %s', 16, 1, @error)
     END CATCH
 END
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.ActualizarLocalidad
+CREATE OR ALTER PROCEDURE Administracion.ActualizarLocalidades
     @id INT = NULL,
-    @provincia_id INT = NULL,
+    @provincias_id INT = NULL,
     @descripcion_vieja VARCHAR(100) = NULL,
     @descripcion_nueva VARCHAR(100) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     --CAMPOS NULOS
-    IF (@id IS NULL AND @provincia_id IS NULL AND @descripcion_vieja IS NULL) OR @descripcion_nueva IS NULL
+    IF (@id IS NULL AND @provincias_id IS NULL AND @descripcion_vieja IS NULL) OR @descripcion_nueva IS NULL
     BEGIN
 	    RAISERROR('NO ingrese campos NULOS.', 16, 1)
         RETURN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.Localidades WHERE @id = id OR @provincia_id = provincia_id OR @descripcion_vieja = descripcion)
+    DECLARE @idRealLoc INT
+    SELECT @idRealLoc = id FROM Administracion.Localidades WHERE @id = id OR @provincias_id = provincias_id OR @descripcion_vieja = descripcion
+
+    IF @idRealLoc IS NULL
     BEGIN
         RAISERROR('La LOCALIDAD no existe o es inválida.', 16, 1)
         RETURN
@@ -577,7 +641,7 @@ BEGIN
     BEGIN TRY
         UPDATE Administracion.Localidades 
         SET descripcion = ISNULL(@descripcion_nueva, descripcion)
-        WHERE @id = id OR @provincia_id = provincia_id OR @descripcion_vieja = descripcion
+        WHERE id = @idRealLoc
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -586,10 +650,10 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.ActualizarParque
+CREATE OR ALTER PROCEDURE Administracion.ActualizarParques
     @id INT = NULL,
-	@tipo_parque_id INT = NULL,
-	@localidad_id INT = NULL,
+	@tipos_parque_id INT = NULL,
+	@localidades_id INT = NULL,
     @direccion VARCHAR(150) = NULL,
 	@nombre VARCHAR(100) = NULL,
 	@superficie_km_2 INT = NULL,
@@ -600,7 +664,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
     --CAMPOS NULOS
-    IF (@id IS NULL AND @tipo_parque_id IS NULL AND @localidad_id IS NULL AND @direccion IS NULL AND @nombre IS NULL AND @superficie_km_2 IS NULL) OR 
+    IF (@id IS NULL AND @tipos_parque_id IS NULL AND @localidades_id IS NULL AND @direccion IS NULL AND @nombre IS NULL AND @superficie_km_2 IS NULL) OR 
         (@direccion_nueva IS NULL AND @nombre_nuevo IS NULL AND @superficie_nueva IS NULL)
     BEGIN
 	    RAISERROR('NO ingrese campos NULOS.', 16, 1)
@@ -608,8 +672,11 @@ BEGIN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.Parques 
-        WHERE @id = id OR @tipo_parque_id = tipo_parque_id OR @localidad_id = localidad_id OR @direccion = direccion OR @nombre = nombre OR @superficie_km_2 = superficie_km_2)
+    DECLARE @idRealParque INT
+    SELECT @idRealParque = id FROM Administracion.Parques 
+        WHERE @id = id OR @tipos_parque_id = tipos_parque_id OR @localidades_id = localidades_id OR @direccion = direccion OR @nombre = nombre OR @superficie_km_2 = superficie_km_2
+
+    IF @idRealParque IS NULL
     BEGIN
         RAISERROR('La PARQUE no existe o es inválida.', 16, 1)
         RETURN
@@ -621,7 +688,7 @@ BEGIN
         SET    direccion    = ISNULL(@direccion_nueva, direccion),
                nombre       = ISNULL(@nombre_nuevo, nombre),
             superficie_km_2 = ISNULL(@superficie_nueva, superficie_km_2)
-        WHERE @id = id OR @tipo_parque_id = tipo_parque_id OR @localidad_id = localidad_id OR @direccion = direccion OR @nombre = nombre OR @superficie_km_2 = superficie_km_2
+        WHERE id = @idRealParque
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -630,15 +697,15 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.ActualizarTarifaArticulo
+CREATE OR ALTER PROCEDURE Administracion.ActualizarTarifasDeArticulo
     @id INT = NULL,
-    @parque_id INT = NULL,
-    @tipo_articulo CHAR(1) = NULL,
+    @parques_id INT = NULL,
+    @tipos_articulo CHAR(1) = NULL,
     @descripcion VARCHAR(50) = NULL,
     @duracion INT = NULL,
     @cupo INT = NULL,
     @precio DECIMAL(10, 2) = NULL,
-    @tipo_articulo_nuevo CHAR(1) = NULL,
+    @tipos_articulo_nuevo CHAR(1) = NULL,
     @descripcion_nueva VARCHAR(50) = NULL,
     @duracion_nueva INT = NULL,
     @cupo_nuevo INT = NULL,
@@ -647,16 +714,19 @@ AS
 BEGIN
     SET NOCOUNT ON;
     --CAMPOS NULOS
-    IF (@id IS NULL AND @parque_id IS NULL AND @tipo_articulo IS NULL AND @descripcion IS NULL AND @duracion IS NULL AND @cupo IS NULL AND @precio IS NULL) OR 
-        (@tipo_articulo_nuevo IS NULL AND @descripcion_nueva IS NULL  AND @duracion_nueva IS NULL AND @cupo_nuevo IS NULL AND @precio_nuevo IS NULL)
+    IF (@id IS NULL AND @parques_id IS NULL AND @tipos_articulo IS NULL AND @descripcion IS NULL AND @duracion IS NULL AND @cupo IS NULL AND @precio IS NULL) OR 
+        (@tipos_articulo_nuevo IS NULL AND @descripcion_nueva IS NULL  AND @duracion_nueva IS NULL AND @cupo_nuevo IS NULL AND @precio_nuevo IS NULL)
     BEGIN
 	    RAISERROR('NO ingrese campos NULOS.', 16, 1)
         RETURN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.TarifasDeArticulo 
-        WHERE @id = id OR @parque_id = parque_id OR @tipo_articulo = tipo_articulo OR @descripcion = descripcion OR @duracion = duracion OR @cupo = cupo OR @precio = precio)
+    DECLARE @idRealTarifa INT
+    SELECT @idRealTarifa = id FROM Administracion.TarifasDeArticulo 
+        WHERE @id = id OR @parques_id = parques_id OR @tipos_articulo = tipos_articulo OR @descripcion = descripcion OR @duracion = duracion OR @cupo = cupo OR @precio = precio
+
+    IF @idRealTarifa IS NULL
     BEGIN
         RAISERROR('La TARIFA ARTÍCULO no existe o es inválida.', 16, 1)
         RETURN
@@ -665,12 +735,12 @@ BEGIN
     --(TRY-CATCH) 
     BEGIN TRY
         UPDATE Administracion.TarifasDeArticulo 
-        SET tipo_articulo   = ISNULL(@tipo_articulo_nuevo, tipo_articulo),
-            descripcion     = ISNULL(@descripcion_nueva, descripcion),
-            duracion        = ISNULL(@duracion_nueva, duracion),
-            cupo            = ISNULL(@cupo_nuevo, cupo),
-            precio          = ISNULL(@precio_nuevo, precio)
-        WHERE @id = id OR @parque_id = parque_id OR @tipo_articulo = tipo_articulo OR @descripcion = descripcion OR @duracion = duracion OR @cupo = cupo OR @precio = precio
+        SET tipos_articulo = ISNULL(@tipos_articulo_nuevo, tipos_articulo),
+            descripcion    = ISNULL(@descripcion_nueva, descripcion),
+            duracion       = ISNULL(@duracion_nueva, duracion),
+            cupo           = ISNULL(@cupo_nuevo, cupo),
+            precio         = ISNULL(@precio_nuevo, precio)
+        WHERE id = @idRealTarifa
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -679,29 +749,32 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.ActualizarAjuste
+CREATE OR ALTER PROCEDURE Administracion.ActualizarAjustes
     @id INT = NULL,
-    @parque_id INT = NULL,
-    @tipo_articulo CHAR(1) = NULL,
-    @tipo_visitante_id INT = NULL,
-    @tipo_fecha_id INT = NULL,
+    @parques_id INT = NULL,
+    @tipos_articulo CHAR(1) = NULL,
+    @tipos_visitante_id INT = NULL,
+    @tipos_fecha_id INT = NULL,
     @porcentaje TINYINT = NULL,
-    @tipo_articulo_nuevo CHAR(1) = NULL,
+    @tipos_articulo_nuevo CHAR(1) = NULL,
     @porcentaje_nuevo TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     --CAMPOS NULOS
-    IF (@id IS NULL AND @parque_id IS NULL AND @tipo_articulo IS NULL AND @tipo_visitante_id IS NULL AND @tipo_fecha_id IS NULL AND @porcentaje IS NULL) OR 
-        (@tipo_articulo_nuevo IS NULL AND @porcentaje_nuevo IS NULL)
+    IF (@id IS NULL AND @parques_id IS NULL AND @tipos_articulo IS NULL AND @tipos_visitante_id IS NULL AND @tipos_fecha_id IS NULL AND @porcentaje IS NULL) OR 
+        (@tipos_articulo_nuevo IS NULL AND @porcentaje_nuevo IS NULL)
     BEGIN
 	    RAISERROR('NO ingrese campos NULOS.', 16, 1)
         RETURN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.Ajustes 
-        WHERE id = @id OR parque_id = @parque_id OR tipo_articulo = @tipo_articulo OR tipo_visitante_id = @tipo_visitante_id OR tipo_fecha_id = @tipo_fecha_id OR porcentaje = @porcentaje)
+    DECLARE @idRealAjuste INT
+    SELECT @idRealAjuste = id FROM Administracion.Ajustes 
+        WHERE id = @id OR parques_id = @parques_id OR tipos_articulo = @tipos_articulo OR tipos_visitante_id = @tipos_visitante_id OR tipos_fecha_id = @tipos_fecha_id OR porcentaje = @porcentaje
+
+    IF @idRealAjuste IS NULL
     BEGIN
         RAISERROR('El AJUSTE no existe o es inválido.', 16, 1)
         RETURN
@@ -710,9 +783,9 @@ BEGIN
     --(TRY-CATCH) 
     BEGIN TRY
         UPDATE Administracion.Ajustes 
-        SET tipo_articulo = ISNULL(@tipo_articulo_nuevo, tipo_articulo), 
-               porcentaje = ISNULL(@porcentaje_nuevo, porcentaje) 
-        WHERE id = @id OR parque_id = @parque_id OR tipo_articulo = @tipo_articulo OR tipo_visitante_id = @tipo_visitante_id OR tipo_fecha_id = @tipo_fecha_id OR porcentaje = @porcentaje
+        SET tipos_articulo = ISNULL(@tipos_articulo_nuevo, tipos_articulo), 
+               porcentaje  = ISNULL(@porcentaje_nuevo, porcentaje) 
+        WHERE id = @idRealAjuste
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -721,23 +794,26 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.ActualizarPuntoVenta
+CREATE OR ALTER PROCEDURE Administracion.ActualizarPuntosDeVenta
     @id INT = NULL,
-    @parque_id INT = NULL,
+    @parques_id INT = NULL,
     @descripcion_vieja VARCHAR(100) = NULL,
     @descripcion_nueva VARCHAR(100) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     --CAMPOS NULOS
-    IF (@id IS NULL AND @parque_id IS NULL AND @descripcion_vieja IS NULL) OR @descripcion_nueva IS NULL
+    IF (@id IS NULL AND @parques_id IS NULL AND @descripcion_vieja IS NULL) OR @descripcion_nueva IS NULL
     BEGIN
 	    RAISERROR('NO ingrese campos NULOS.', 16, 1)
         RETURN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.PuntosDeVenta WHERE @id = id OR @parque_id = parque_id OR @descripcion_vieja = descripcion)
+    DECLARE @idRealPDV INT
+    SELECT @idRealPDV = id FROM Administracion.PuntosDeVenta WHERE @id = id OR @parques_id = parques_id OR @descripcion_vieja = descripcion
+
+    IF @idRealPDV IS NULL
     BEGIN
         RAISERROR('El PUNTO DE VENTA no existe o es inválido.', 16, 1)
         RETURN
@@ -747,7 +823,7 @@ BEGIN
     BEGIN TRY
         UPDATE Administracion.PuntosDeVenta 
         SET descripcion = ISNULL(@descripcion_nueva, descripcion) 
-        WHERE @id = id OR @parque_id = parque_id OR @descripcion_vieja = descripcion
+        WHERE id = @idRealPDV
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -758,7 +834,7 @@ GO
 
 /*------------------------------------------------------------------------------------------------------------*/
 --ELIMINAR DATOS
-CREATE OR ALTER PROCEDURE Administracion.EliminarFormaPago
+CREATE OR ALTER PROCEDURE Administracion.EliminarFormasDePago
     @id INT = NULL,
     @descripcion VARCHAR(30) = NULL
 AS
@@ -772,7 +848,10 @@ BEGIN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.FormasDePago WHERE @id = id OR @descripcion = descripcion)
+    DECLARE @idRealFDP INT
+    SELECT @idRealFDP = id FROM Administracion.FormasDePago WHERE @id = id OR @descripcion = descripcion
+
+    IF @idRealFDP IS NULL
     BEGIN
         RAISERROR('La FORMA DE PAGO no existe o es inválida.', 16, 1)
         RETURN
@@ -781,7 +860,7 @@ BEGIN
     --(TRY-CATCH) 
     BEGIN TRY
         DELETE FROM Administracion.FormasDePago 
-        WHERE @id = id OR @descripcion = descripcion
+        WHERE id = @idRealFDP
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -804,7 +883,10 @@ BEGIN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.Divisas WHERE @id = id OR @descripcion = descripcion)
+    DECLARE @idRealDiv INT
+    SELECT @idRealDiv = id FROM Administracion.Divisas WHERE @id = id OR @descripcion = descripcion
+
+    IF @idRealDiv IS NULL
     BEGIN
         RAISERROR('La Divisas no existe o es inválida.', 16, 1)
         RETURN
@@ -813,7 +895,7 @@ BEGIN
     --(TRY-CATCH) 
     BEGIN TRY
         DELETE FROM Administracion.Divisas 
-        WHERE @id = id OR @descripcion = descripcion
+        WHERE id = @idRealDiv
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -822,7 +904,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.EliminarTipoFecha
+CREATE OR ALTER PROCEDURE Administracion.EliminarTiposDeFecha
     @id INT = NULL,
     @descripcion VARCHAR(30) = NULL
 AS
@@ -836,7 +918,10 @@ BEGIN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.TiposDeFecha WHERE @id = id OR @descripcion = descripcion)
+    DECLARE @idRealTDF INT
+    SELECT @idRealTDF = id FROM Administracion.TiposDeFecha WHERE @id = id OR @descripcion = descripcion
+
+    IF @idRealTDF IS NULL
     BEGIN
         RAISERROR('El TIPO DE FECHA no existe o es inválida.', 16, 1)
         RETURN
@@ -845,7 +930,7 @@ BEGIN
     --(TRY-CATCH) 
     BEGIN TRY
         DELETE FROM Administracion.TiposDeFecha
-        WHERE @id = id OR @descripcion = descripcion
+        WHERE id = @idRealTDF
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -854,7 +939,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.EliminarTipoParque
+CREATE OR ALTER PROCEDURE Administracion.EliminarTiposDeVisitante
     @id INT = NULL,
     @descripcion VARCHAR(30) = NULL
 AS
@@ -868,16 +953,55 @@ BEGIN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.TiposDeParque WHERE @id = id OR @descripcion = descripcion)
+    DECLARE @idRealTDV INT
+    SELECT @idRealTDV = id FROM Administracion.TiposDeVisitante WHERE @id = id OR @descripcion = descripcion
+
+    IF @idRealTDV IS NULL
     BEGIN
-        RAISERROR('El TIPO DE PARQUE no existe o es inválida.', 16, 1)
+        RAISERROR('El TIPO DE VISITANTE no existe o es inválido.', 16, 1)
+        RETURN
+    END
+
+    --(TRY-CATCH) 
+    BEGIN TRY
+        DELETE FROM Administracion.TiposDeVisitante
+        WHERE id = @idRealTDV
+    END TRY
+    BEGIN CATCH
+        DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
+	RAISERROR('Error al eliminar TIPO DE VISITANTE: %s', 16, 1, @error)
+    END CATCH
+END
+GO
+
+
+CREATE OR ALTER PROCEDURE Administracion.EliminarTiposDeParque
+    @id INT = NULL,
+    @descripcion VARCHAR(30) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    --CAMPOS NULOS
+    IF @id IS NULL AND @descripcion IS NULL
+    BEGIN
+	    RAISERROR('NO ingrese campos NULOS.', 16, 1)
+        RETURN
+    END
+
+    --PARÁMETROS INEXISTENTES
+    DECLARE @idRealTDP INT
+    SELECT @idRealTDP = id FROM Administracion.TiposDeParque WHERE @id = id OR @descripcion = descripcion
+
+    IF @idRealTDP IS NULL
+    BEGIN
+        RAISERROR('El TIPO DE PARQUE no existe o es inválido.', 16, 1)
         RETURN
     END
 
     --(TRY-CATCH) 
     BEGIN TRY
         DELETE FROM Administracion.TiposDeParque
-        WHERE @id = id OR @descripcion = descripcion
+        WHERE id = @idRealTDP
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -886,7 +1010,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.EliminarProvincia
+CREATE OR ALTER PROCEDURE Administracion.EliminarProvincias
     @id INT = NULL,
     @descripcion VARCHAR(100) = NULL
 AS
@@ -900,40 +1024,46 @@ BEGIN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.Provincias WHERE @id = id OR @descripcion = descripcion)
+    DECLARE @idRealProv INT
+    SELECT @idRealProv = id FROM Administracion.Provincias WHERE @id = id OR @descripcion = descripcion
+
+    IF @idRealProv IS NULL
     BEGIN
-        RAISERROR('La PROVINCIA no existe o es inválida.', 16, 1)
+        RAISERROR('La Provincia no existe o es inválida.', 16, 1)
         RETURN
     END
 
     --(TRY-CATCH) 
     BEGIN TRY
         DELETE FROM Administracion.Provincias
-        WHERE @id = id OR @descripcion = descripcion
+        WHERE id = @idRealProv
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
-	RAISERROR('Error al eliminar PROVINCIA: %s', 16, 1, @error)
+	RAISERROR('Error al eliminar Provincias: %s', 16, 1, @error)
     END CATCH
 END
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.EliminarLocalidad
+CREATE OR ALTER PROCEDURE Administracion.EliminarLocalidades
     @id INT = NULL,
-    @provincia_id INT = NULL,
+    @provincias_id INT = NULL,
     @descripcion VARCHAR(100) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     --CAMPOS NULOS
-    IF @id IS NULL AND @provincia_id IS NULL AND @descripcion IS NULL
+    IF @id IS NULL AND @provincias_id IS NULL AND @descripcion IS NULL
     BEGIN
 	    RAISERROR('NO ingrese campos NULOS.', 16, 1)
         RETURN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.Localidades WHERE @id = id OR @provincia_id = provincia_id OR @descripcion = descripcion)
+    DECLARE @idRealLoc INT
+    SELECT @idRealLoc = id FROM Administracion.Localidades WHERE @id = id OR @provincias_id = provincias_id OR @descripcion = descripcion
+
+    IF @idRealLoc IS NULL
     BEGIN
         RAISERROR('La LOCALIDAD no existe o es inválida.', 16, 1)
         RETURN
@@ -942,7 +1072,7 @@ BEGIN
     --(TRY-CATCH) 
     BEGIN TRY
         DELETE FROM Administracion.Localidades
-        WHERE @id = id OR @provincia_id = provincia_id OR @descripcion = descripcion
+        WHERE id = @idRealLoc
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -951,10 +1081,10 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.EliminarParque
+CREATE OR ALTER PROCEDURE Administracion.EliminarParques
     @id INT = NULL,
-	@tipo_parque_id INT = NULL,
-	@localidad_id INT = NULL,
+	@tipos_parque_id INT = NULL,
+	@localidades_id INT = NULL,
     @direccion VARCHAR(150) = NULL,
 	@nombre VARCHAR(100) = NULL,
 	@superficie_km_2 INT = NULL
@@ -962,15 +1092,18 @@ AS
 BEGIN
     SET NOCOUNT ON;
     --CAMPOS NULOS
-    IF @id IS NULL AND @tipo_parque_id IS NULL AND @localidad_id IS NULL AND @direccion IS NULL AND @nombre IS NULL AND @superficie_km_2 IS NULL
+    IF @id IS NULL AND @tipos_parque_id IS NULL AND @localidades_id IS NULL AND @direccion IS NULL AND @nombre IS NULL AND @superficie_km_2 IS NULL
     BEGIN
 	    RAISERROR('NO ingrese campos NULOS.', 16, 1)
         RETURN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.Parques 
-        WHERE @id = id OR @tipo_parque_id = tipo_parque_id OR @localidad_id = localidad_id OR @direccion = direccion OR @nombre = nombre OR @superficie_km_2 = superficie_km_2)
+    DECLARE @idRealParque INT
+    SELECT @idRealParque = id FROM Administracion.Parques 
+        WHERE @id = id OR @tipos_parque_id = tipos_parque_id OR @localidades_id = localidades_id OR @direccion = direccion OR @nombre = nombre OR @superficie_km_2 = superficie_km_2
+
+    IF @idRealParque IS NULL
     BEGIN
         RAISERROR('El PARQUE no existe o es inválido.', 16, 1)
         RETURN
@@ -979,7 +1112,7 @@ BEGIN
     --(TRY-CATCH) 
     BEGIN TRY
         DELETE FROM Administracion.Parques
-        WHERE @id = id OR @tipo_parque_id = tipo_parque_id OR @localidad_id = localidad_id OR @direccion = direccion OR @nombre = nombre OR @superficie_km_2 = superficie_km_2
+        WHERE id = @idRealParque
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -988,10 +1121,10 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.EliminarTarifaArticulo
+CREATE OR ALTER PROCEDURE Administracion.EliminarTarifasDeArticulo
     @id INT = NULL,
-    @parque_id INT = NULL,
-    @tipo_articulo CHAR(1) = NULL,
+    @parques_id INT = NULL,
+    @tipos_articulo CHAR(1) = NULL,
     @descripcion VARCHAR(50) = NULL,
     @duracion INT = NULL,
     @cupo INT = NULL,
@@ -1000,15 +1133,18 @@ AS
 BEGIN
     SET NOCOUNT ON;
     --CAMPOS NULOS
-    IF @id IS NULL AND @parque_id IS NULL AND @tipo_articulo IS NULL AND @descripcion IS NULL AND @duracion IS NULL AND @cupo IS NULL AND @precio IS NULL
+    IF @id IS NULL AND @parques_id IS NULL AND @tipos_articulo IS NULL AND @descripcion IS NULL AND @duracion IS NULL AND @cupo IS NULL AND @precio IS NULL
     BEGIN
 	    RAISERROR('NO ingrese campos NULOS.', 16, 1)
         RETURN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.TarifasDeArticulo 
-        WHERE @id = id OR @parque_id = parque_id OR @tipo_articulo = tipo_articulo OR @descripcion = descripcion OR @duracion = duracion OR @cupo = cupo OR @precio = precio)
+    DECLARE @idRealTarifa INT
+    SELECT @idRealTarifa = id FROM Administracion.TarifasDeArticulo 
+        WHERE @id = id OR @parques_id = parques_id OR @tipos_articulo = tipos_articulo OR @descripcion = descripcion OR @duracion = duracion OR @cupo = cupo OR @precio = precio
+
+    IF @idRealTarifa IS NULL
     BEGIN
         RAISERROR('La TARIFA DE ARTICULO no existe o es inválida.', 16, 1)
         RETURN
@@ -1017,7 +1153,7 @@ BEGIN
     --(TRY-CATCH) 
     BEGIN TRY
         DELETE FROM Administracion.TarifasDeArticulo
-        WHERE @id = id OR @parque_id = parque_id OR @tipo_articulo = tipo_articulo OR @descripcion = descripcion OR @duracion = duracion OR @cupo = cupo OR @precio = precio
+        WHERE id = @idRealTarifa
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -1026,26 +1162,29 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.EliminarAjuste
+CREATE OR ALTER PROCEDURE Administracion.EliminarAjustes
     @id INT = NULL,
-    @parque_id INT = NULL,
-    @tipo_articulo CHAR(1) = NULL,
-    @tipo_visitante_id INT = NULL,
-    @tipo_fecha_id INT = NULL,
+    @parques_id INT = NULL,
+    @tipos_articulo CHAR(1) = NULL,
+    @tipos_visitante_id INT = NULL,
+    @tipos_fecha_id INT = NULL,
     @porcentaje TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     --CAMPOS NULOS
-    IF @id IS NULL AND @parque_id IS NULL AND @tipo_articulo IS NULL AND @tipo_visitante_id IS NULL AND @tipo_fecha_id IS NULL AND @porcentaje IS NULL
+    IF @id IS NULL AND @parques_id IS NULL AND @tipos_articulo IS NULL AND @tipos_visitante_id IS NULL AND @tipos_fecha_id IS NULL AND @porcentaje IS NULL
     BEGIN
 	    RAISERROR('NO ingrese campos NULOS.', 16, 1)
         RETURN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.Ajustes 
-        WHERE id = @id AND parque_id = @parque_id AND tipo_articulo = @tipo_articulo AND tipo_visitante_id = @tipo_visitante_id AND tipo_fecha_id = @tipo_fecha_id AND porcentaje = @porcentaje)
+    DECLARE @idRealAjuste INT
+    SELECT @idRealAjuste = id FROM Administracion.Ajustes 
+        WHERE id = @id AND parques_id = @parques_id AND tipos_articulo = @tipos_articulo AND tipos_visitante_id = @tipos_visitante_id AND tipos_fecha_id = @tipos_fecha_id AND porcentaje = @porcentaje
+
+    IF @idRealAjuste IS NULL
     BEGIN
         RAISERROR('El AJUSTE no existe o es inválido.', 16, 1)
         RETURN
@@ -1054,7 +1193,7 @@ BEGIN
     --(TRY-CATCH) 
     BEGIN TRY
         DELETE FROM Administracion.Ajustes
-        WHERE id = @id AND parque_id = @parque_id AND tipo_articulo = @tipo_articulo AND tipo_visitante_id = @tipo_visitante_id AND tipo_fecha_id = @tipo_fecha_id AND porcentaje = @porcentaje
+        WHERE id = @idRealAjuste
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
@@ -1063,22 +1202,25 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE Administracion.EliminarPuntoVenta
+CREATE OR ALTER PROCEDURE Administracion.EliminarPuntosDeVenta
     @id INT = NULL,
-    @parque_id INT = NULL,
+    @parques_id INT = NULL,
     @descripcion VARCHAR(100) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     --CAMPOS NULOS
-    IF @id IS NULL AND @parque_id IS NULL AND @descripcion IS NULL
+    IF @id IS NULL AND @parques_id IS NULL AND @descripcion IS NULL
     BEGIN
 	    RAISERROR('NO ingrese campos NULOS.', 16, 1)
         RETURN
     END
 
     --PARÁMETROS INEXISTENTES
-    IF NOT EXISTS (SELECT id FROM Administracion.PuntosDeVenta WHERE @id = id OR @parque_id = parque_id OR @descripcion = descripcion)
+    DECLARE @idRealPDV INT
+    SELECT @idRealPDV = id FROM Administracion.PuntosDeVenta WHERE @id = id OR @parques_id = parques_id OR @descripcion = descripcion
+
+    IF @idRealPDV IS NULL
     BEGIN
         RAISERROR('El PUNTO DE VENTA no existe o es inválido.', 16, 1)
         RETURN
@@ -1087,7 +1229,7 @@ BEGIN
     --(TRY-CATCH) 
     BEGIN TRY
         DELETE FROM Administracion.PuntosDeVenta
-        WHERE @id = id OR @parque_id = parque_id OR @descripcion = descripcion
+        WHERE id = @idRealPDV
     END TRY
     BEGIN CATCH
         DECLARE @error VARCHAR(500) = ERROR_MESSAGE()
