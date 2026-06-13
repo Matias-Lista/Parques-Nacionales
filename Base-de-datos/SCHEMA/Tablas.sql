@@ -240,6 +240,7 @@ BEGIN
     );
 END;
 
+-- TODO: Regla de negocio, al menos dos semanas de concesion ?
 IF OBJECT_ID('Comercial.Concesiones', 'U') IS NULL
 BEGIN
     CREATE TABLE Comercial.Concesiones (

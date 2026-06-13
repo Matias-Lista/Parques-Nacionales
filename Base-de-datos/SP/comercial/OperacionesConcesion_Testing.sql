@@ -1,5 +1,6 @@
 -- Para probar las concesiones necesitamos una actividad, una empresa, y un parque
 
+exec Comercial.CrearActividadDeConcesion 'hola','descripcion';
 
 -- Minimo e indispensable para un parque:
 -- Tipo de parque
