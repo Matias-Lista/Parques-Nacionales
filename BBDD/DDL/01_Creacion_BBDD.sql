@@ -1,3 +1,18 @@
+/* #####################################
+   # Universidad Nacional de la Matanza#
+   #      Bases de Datos Aplicada      #
+   #####################################
+
+   Participan: 
+     - Iván Gonzalez Fernandez
+
+   #####################################
+   #       01_Creacion_BBDD.sql      #
+   #####################################
+   El objetivo de este script es crear formalmente
+   la base de datos...
+*/
+
 USE master
 GO
 

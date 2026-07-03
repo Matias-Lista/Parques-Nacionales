@@ -1,3 +1,20 @@
+/* #####################################
+   # Universidad Nacional de la Matanza#
+   #      Bases de Datos Aplicada      #
+   #####################################
+
+   Participan: 
+     - Iván Gonzalez Fernandez
+
+   #####################################
+   #       02_Importacion_Comercial.sql      #
+   #####################################
+   El objetivo de este script es definir todos los 
+   store procedures relacionados con la importación
+   y generación de datos dentro del esquema de
+   Comercial...
+*/
+
 USE ParquesNacionales
 GO
 

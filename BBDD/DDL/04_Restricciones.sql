@@ -1,3 +1,18 @@
+/* #####################################
+   # Universidad Nacional de la Matanza#
+   #      Bases de Datos Aplicada      #
+   #####################################
+
+   Participan: 
+     - Iván Gonzalez Fernandez
+
+   #####################################
+   #       04_Restricciones.sql      #
+   #####################################
+   El objetivo de este script es definir todas las
+   restricciones sobre cada una de las tablas...
+*/
+
 USE ParquesNacionales;
 GO
 
@@ -164,7 +179,7 @@ BEGIN
     ALTER TABLE Ventas.Actividades
         ADD CONSTRAINT DF_Actividades_Fecha_Visita DEFAULT GETDATE() FOR f_visita
     ALTER TABLE Ventas.Actividades    
-        ADD CONSTRAINT CK_Actividades_Precio CHECK (precio >= 0)
+        ADD CONSTRAINT CK_Actividades_Precio CHECK (precio >= 0 OR precio IS NULL)
     ALTER TABLE Ventas.Actividades    
         ADD CONSTRAINT FK_Actividades_Tarifas FOREIGN KEY (tarifa_id) REFERENCES Administracion.TarifasDeArticulo(id)
     ALTER TABLE Ventas.Actividades    
@@ -188,7 +203,7 @@ BEGIN
     ALTER TABLE Ventas.Entradas
         ADD CONSTRAINT DF_Entradas_Fecha_Visita DEFAULT GETDATE() FOR f_visita
     ALTER TABLE Ventas.Entradas    
-        ADD CONSTRAINT CK_Entradas_Precio CHECK (precio > 0)
+        ADD CONSTRAINT CK_Entradas_Precio CHECK (precio > 0 OR precio IS NULL)
     ALTER TABLE Ventas.Entradas    
         ADD CONSTRAINT FK_Entradas_Tarifas FOREIGN KEY (tarifa_id) REFERENCES Administracion.TarifasDeArticulo(id)
     ALTER TABLE Ventas.Entradas    

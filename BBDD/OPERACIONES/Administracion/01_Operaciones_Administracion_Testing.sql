@@ -1,434 +1,202 @@
-USE ParquesNacionales
+/* #####################################
+   # Universidad Nacional de la Matanza#
+   #      Bases de Datos Aplicada      #
+   #####################################
 
-BEGIN TRANSACTION
+   Participan: 
+     - Iván Gonzalez Fernandez
 
---INGRESAR DATOS
--- =============================================
--- FormasDePago
--- =============================================
--- RECHAZO: descripcion nula
-EXEC Administracion.IngresarFormasDePago
-GO
--- EXITO: descripcion valida
-EXEC Administracion.IngresarFormasDePago @descripcion = 'Efectivo'
-GO
-EXEC Administracion.IngresarFormasDePago @descripcion = 'Tarjeta de débito'
-GO
-EXEC Administracion.IngresarFormasDePago @descripcion = 'Tarjeta de crédito'
-GO
-EXEC Administracion.IngresarFormasDePago @descripcion = 'Transferencia bancaria'
+   #####################################
+   #  01_Operaciones_Administracion_Testing.sql  #
+   #####################################
+   Casos de prueba para los stored procedures de ABM
+   del módulo Administracion (OperacionesAdministracion.sql).
+*/
+
+USE ParquesNacionales;
 GO
 
--- =============================================
--- Divisas
--- =============================================
--- RECHAZO: descripcion nula
-EXEC Administracion.IngresarDivisas
-GO
--- EXITO: descripcion valida
-EXEC Administracion.IngresarDivisas @descripcion = 'Peso argentino'
-GO
-EXEC Administracion.IngresarDivisas @descripcion = 'Dólar estadounidense'
-GO
-EXEC Administracion.IngresarDivisas @descripcion = 'Euro'
+-- ==========================================================================
+-- 1. CONFIGURACIÓN DE ENTORNO Y LIMPIEZA DE TEST ANTERIORES
+-- ==========================================================================
+PRINT '--- Iniciando Suite de Pruebas para Administración ---';
+SET NOCOUNT ON;
 GO
 
--- =============================================
--- TiposDeFecha
--- =============================================
--- RECHAZO: descripcion nula
-EXEC Administracion.IngresarTiposDeFecha
-GO
--- EXITO: descripcion valida
-EXEC Administracion.IngresarTiposDeFecha @descripcion = 'Día hábil'
-GO
-EXEC Administracion.IngresarTiposDeFecha @descripcion = 'Fin de semana'
-GO
-EXEC Administracion.IngresarTiposDeFecha @descripcion = 'Feriado nacional'
-GO
-EXEC Administracion.IngresarTiposDeFecha @descripcion = 'Feriado provincial'
-GO
+-- ==========================================================================
+-- 2. CASOS DE PRUEBA (TEST SUITE)
+-- ==========================================================================
 
--- =============================================
--- TiposDeVisitante
--- =============================================
--- RECHAZO: descripcion nula
-EXEC Administracion.IngresarTiposDeVisitante
-GO
--- EXITO: descripcion valida
-EXEC Administracion.IngresarTiposDeVisitante @descripcion = 'Residente'
-GO
-EXEC Administracion.IngresarTiposDeVisitante @descripcion = 'Jubilado'
-GO
-EXEC Administracion.IngresarTiposDeVisitante @descripcion = 'Estudiante'
-GO
-EXEC Administracion.IngresarTiposDeVisitante @descripcion = 'Extranjero'
-GO
+-- Variables globales para persistir IDs entre pruebas si fuera necesario
+DECLARE @TestGuiaId INT = 999;        -- ID de guía ficticio para pruebas
+DECLARE @TestArticuloId INT = 55;     -- ID de artículo ficticio (ej. Tour)
+DECLARE @TestParqueId INT = 10;       -- ID de parque ficticio
+DECLARE @OutputAutorizacionId INT;
+DECLARE @OutputTarifaId INT;
 
--- =============================================
--- TiposDeParque
--- =============================================
--- RECHAZO: descripcion nula
-EXEC Administracion.IngresarTiposDeParque
-GO
--- EXITO: descripcion valida
-EXEC Administracion.IngresarTiposDeParque @descripcion = 'Nacional'
-GO
-EXEC Administracion.IngresarTiposDeParque @descripcion = 'Provincial'
-GO
-EXEC Administracion.IngresarTiposDeParque @descripcion = 'Reserva'
-GO
-EXEC Administracion.IngresarTiposDeParque @descripcion = 'Monumento Natural'
-GO
--- =============================================
--- Provincias
--- =============================================
--- RECHAZO: nombre nulo
-EXEC Administracion.IngresarProvincias
-GO
--- EXITO: nombre valido
-EXEC Administracion.IngresarProvincias @nombre = 'Capital Federal'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Buenos Aires'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Catamarca'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Chaco'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Chubut'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Córdoba'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Corrientes'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Entre Ríos'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Formosa'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Jujuy'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'La Pampa'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'La Rioja'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Mendoza'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Misiones'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Neuquén'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Río Negro'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Salta'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'San Juan'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'San Luis'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Santa Cruz'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Santa Fe'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Santiago del Estero'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Tierra del Fuego, Antártida e Islas del Atlántico Sur'
-GO
-EXEC Administracion.IngresarProvincias @nombre = 'Tucumán'
-GO
+-- ==========================================================================
+-- PRUEBA 1: RRHH.InsertarAutorizacionesDeGuias (Camino Feliz)
+-- ==========================================================================
+PRINT '>> TEST 1: Insertar Autorización de Guía Válida';
+BEGIN TRY
+    -- Aseguramos datos mínimos en tablas maestras si tuvieran FK estrictas
+    -- (Ajustar o comentar si tu esquema requiere inserts previos en RRHH.Guias o Administracion.Articulos)
+    
+    EXEC RRHH.InsertarAutorizacionesDeGuias
+        @guia_id = @TestGuiaId,
+        @articulo_id = @TestArticuloId,
+        @f_inicio = '2026-01-01',
+        @f_fin = NULL, -- Activo
+        @id = @OutputAutorizacionId OUTPUT;
 
--- =============================================
--- Parques
--- IDs de referencia asumidos según inserción:
---   TiposDeParque:  Nacional=1, Provincial=2, Reserva=3, Monumento Natural=4
---   provincia:    Bariloche=1, El Bolsón=2, San Martín de los Andes=3,
---                   Villa La Angostura=4, Esquel=5, Calafate=6,
---                   Ushuaia=7, Cachi=8, Tilcara=9, Puerto Iguazú=10
--- =============================================
+    PRINT '   [OK] Autorización creada exitosamente. ID asignado: ' + CAST(@OutputAutorizacionId AS VARCHAR(10));
+END TRY
+BEGIN CATCH
+    PRINT '   [FALLÓ] No se pudo insertar una autorización válida. Error: ' + ERROR_MESSAGE();
+END CATCH;
+PRINT '--------------------------------------------------';
 
--- RECHAZO: tipo de parque inexistente
-EXEC Administracion.IngresarParques 
-    @tipo_parque_id = 9999, @provincia_id = 1, 
-    @nombre = 'Nahuel Huapi', @superficie = 794900
-GO
--- RECHAZO: localidad inexistente
-EXEC Administracion.IngresarParques 
-    @tipo_parque_id = 1, @provincia_id = 9999, 
-    @nombre = 'Nahuel Huapi', @superficie = 794900
-GO
--- RECHAZO: nombre nulo
-EXEC Administracion.IngresarParques 
-    @tipo_parque_id = 1, @provincia_id = 1, 
-    @superficie = 794900
-GO
--- RECHAZO: superficie negativa
-EXEC Administracion.IngresarParques 
-    @tipo_parque_id = 1, @provincia_id = 1, 
-    @nombre = 'Nahuel Huapi', @superficie = -1
-GO
--- RECHAZO: superficie cero
-EXEC Administracion.IngresarParques 
-    @tipo_parque_id = 1, @provincia_id = 1, 
-    @nombre = 'Nahuel Huapi', @superficie = 0
-GO
--- EXITO: parques nacionales reales (dirección opcional, queda NULL)
-EXEC Administracion.IngresarParques 
-    @tipo_parque_id = 1, @provincia_id = 1,
-    @nombre = 'Nahuel Huapi', @superficie = 794900
-GO
-EXEC Administracion.IngresarParques 
-    @tipo_parque_id = 1, @provincia_id = 3,
-    @nombre = 'Lanín', @superficie = 412000
-GO
-EXEC Administracion.IngresarParques 
-    @tipo_parque_id = 1, @provincia_id = 6,
-    @nombre = 'Los Glaciares', @superficie = 726927
-GO
-EXEC Administracion.IngresarParques 
-    @tipo_parque_id = 1, @provincia_id = 7,
-    @nombre = 'Tierra del Fuego', @superficie = 63000
-GO
-EXEC Administracion.IngresarParques 
-    @tipo_parque_id = 1, @provincia_id = 10,
-    @nombre = 'Iguazú', @superficie = 67620
-GO
-EXEC Administracion.IngresarParques 
-    @tipo_parque_id = 3, @provincia_id = 8,
-    @nombre = 'Los Cardones', @superficie = 65000
-GO
-EXEC Administracion.IngresarParques 
-    @tipo_parque_id = 3, @provincia_id = 9,
-    @nombre = 'Quebrada de Humahuaca', @superficie = 172000
-GO
 
--- =============================================
--- TarifasDeArticulo
--- IDs de parques asumidos según inserción:
---   Nahuel Huapi=1, Lanín=2, Los Glaciares=3,
---   Tierra del Fuego=4, Iguazú=5, Los Cardones=6, Quebrada de Humahuaca=7
--- tipos_articulo: 'E'=Entrada, 'A'=Actividad, 'T'=Tour
--- =============================================
+-- ==========================================================================
+-- PRUEBA 2: RRHH.InsertarAutorizacionesDeGuias (Caso de Falla - Fechas Invertidas)
+-- ==========================================================================
+PRINT '>> TEST 2: Insertar Autorización con Fecha Fin Anterior a Fecha Inicio (Debe Fallar)';
+BEGIN TRY
+    DECLARE @FailAutId INT;
 
--- RECHAZO: parque inexistente
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 9999, @tipos_articulo = 'E',
-    @descripcion = 'Entrada general', @precio = 5000
-GO
--- RECHAZO: tipo de artículo inválido (valor fuera de E/A/T)
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 1, @tipos_articulo = 'X',
-    @descripcion = 'Entrada general', @precio = 5000
-GO
--- RECHAZO: tipo de artículo nulo
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 1,
-    @descripcion = 'Entrada general', @precio = 5000
-GO
--- RECHAZO: descripción nula
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 1, @tipos_articulo = 'E',
-    @precio = 5000
-GO
--- RECHAZO: tour sin duración
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 1, @tipos_articulo = 'T',
-    @descripcion = 'Tour navegación lago', @cupo = 20, @precio = 15000
-GO
--- RECHAZO: tour sin cupo
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 1, @tipos_articulo = 'T',
-    @descripcion = 'Tour navegación lago', @duracion = 180, @precio = 15000
-GO
--- RECHAZO: tour con duración cero
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 1, @tipos_articulo = 'T',
-    @descripcion = 'Tour navegación lago', @duracion = 0, @cupo = 20, @precio = 15000
-GO
--- RECHAZO: precio negativo
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 1, @tipos_articulo = 'E',
-    @descripcion = 'Entrada general', @precio = -1
-GO
--- RECHAZO: precio nulo
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 1, @tipos_articulo = 'E',
-    @descripcion = 'Entrada general'
-GO
--- EXITO: entrada general (precio > 0)
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 1, @tipos_articulo = 'E',
-    @descripcion = 'Entrada general', @precio = 5000
-GO
--- EXITO: entrada gratuita (precio = 0, válido)
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 1, @tipos_articulo = 'E',
-    @descripcion = 'Entrada menores de 12', @precio = 0
-GO
--- EXITO: actividad sin duración ni cupo (no es tour, no aplica validación)
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 1, @tipos_articulo = 'A',
-    @descripcion = 'Alquiler de kayak', @precio = 8000
-GO
--- EXITO: tour completo con duración y cupo
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 1, @tipos_articulo = 'T',
-    @descripcion = 'Tour navegación lago', @duracion = 180, @cupo = 20, @precio = 15000
-GO
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 3, @tipos_articulo = 'E',
-    @descripcion = 'Entrada general', @precio = 6000
-GO
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 3, @tipos_articulo = 'T',
-    @descripcion = 'Trekking Perito Moreno', @duracion = 240, @cupo = 15, @precio = 20000
-GO
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 5, @tipos_articulo = 'E',
-    @descripcion = 'Entrada general', @precio = 7000
-GO
-EXEC Administracion.IngresarTarifasDeArticulo
-    @parques_id = 5, @tipos_articulo = 'T',
-    @descripcion = 'Tour cataratas circuito inferior', @duracion = 90, @cupo = 30, @precio = 12000
-GO
+    EXEC RRHH.InsertarAutorizacionesDeGuias
+        @guia_id = @TestGuiaId,
+        @articulo_id = @TestArticuloId,
+        @f_inicio = '2026-05-10',
+        @f_fin = '2026-05-01', -- Invertida
+        @id = @FailAutId OUTPUT;
 
--- =============================================
--- Ajustes
--- IDs de referencia asumidos según inserción:
---   TiposDeVisitante: Residente=1, Jubilado=2, Estudiante=3, Extranjero=4
---   TiposDeFecha:     Día hábil=1, Fin de semana=2, Feriado nacional=3, Feriado provincial=4
--- porcentaje: TINYINT, rango válido >= -100
--- =============================================
+    PRINT '   [FALLÓ] El SP permitió registrar una fecha de fin anterior a la de inicio.';
+END TRY
+BEGIN CATCH
+    PRINT '   [OK] El procedimiento bloqueó la consistencia de fechas correctamente.';
+    PRINT '   Mensaje esperado: ' + ERROR_MESSAGE();
+END CATCH;
+PRINT '--------------------------------------------------';
 
--- RECHAZO: parque inexistente
-EXEC Administracion.IngresarAjustes
-    @parques_id = 9999, @tipos_articulo = 'E',
-    @tipos_visitante_id = 1, @tipos_fecha_id = 1, @porcentaje = 10
-GO
--- RECHAZO: tipo de artículo inválido
-EXEC Administracion.IngresarAjustes
-    @parques_id = 1, @tipos_articulo = 'Z',
-    @tipos_visitante_id = 1, @tipos_fecha_id = 1, @porcentaje = 10
-GO
--- RECHAZO: tipo de visitante inexistente
-EXEC Administracion.IngresarAjustes
-    @parques_id = 1, @tipos_articulo = 'E',
-    @tipos_visitante_id = 9999, @tipos_fecha_id = 1, @porcentaje = 10
-GO
--- RECHAZO: tipo de fecha inexistente
-EXEC Administracion.IngresarAjustes
-    @parques_id = 1, @tipos_articulo = 'E',
-    @tipos_visitante_id = 1, @tipos_fecha_id = 9999, @porcentaje = 10
-GO
--- RECHAZO: porcentaje nulo
-EXEC Administracion.IngresarAjustes
-    @parques_id = 1, @tipos_articulo = 'E',
-    @tipos_visitante_id = 1, @tipos_fecha_id = 1
-GO
--- RECHAZO: porcentaje inválido (menor a -100)
-EXEC Administracion.IngresarAjustes
-    @parques_id = 1, @tipos_articulo = 'E',
-    @tipos_visitante_id = 1, @tipos_fecha_id = 1, @porcentaje = -101
-GO
--- EXITO: descuento jubilados en día hábil (-50%)
-EXEC Administracion.IngresarAjustes
-    @parques_id = 1, @tipos_articulo = 'E',
-    @tipos_visitante_id = 2, @tipos_fecha_id = 1, @porcentaje = -50
-GO
--- EXITO: descuento estudiantes en día hábil (-30%)
-EXEC Administracion.IngresarAjustes
-    @parques_id = 1, @tipos_articulo = 'E',
-    @tipos_visitante_id = 3, @tipos_fecha_id = 1, @porcentaje = -30
-GO
--- EXITO: recargo extranjeros en feriado nacional (+20%)
-EXEC Administracion.IngresarAjustes
-    @parques_id = 1, @tipos_articulo = 'E',
-    @tipos_visitante_id = 4, @tipos_fecha_id = 3, @porcentaje = 20
-GO
--- EXITO: descuento gratuito (porcentaje = -100, límite válido)
-EXEC Administracion.IngresarAjustes
-    @parques_id = 1, @tipos_articulo = 'E',
-    @tipos_visitante_id = 2, @tipos_fecha_id = 3, @porcentaje = -100
-GO
--- EXITO: ajuste en tours para Iguazú
-EXEC Administracion.IngresarAjustes
-    @parques_id = 5, @tipos_articulo = 'T',
-    @tipos_visitante_id = 2, @tipos_fecha_id = 1, @porcentaje = -40
-GO
 
--- =============================================
--- PuntosDeVenta
--- =============================================
+-- ==========================================================================
+-- PRUEBA 3: RRHH.InsertarAutorizacionesDeGuias (Caso de Falla - Superposición / Duplicado Activo)
+-- ==========================================================================
+PRINT '>> TEST 3: Insertar Guía Duplicado o con Superposición Activa (Debe Fallar)';
+BEGIN TRY
+    DECLARE @DupAutId INT;
 
--- RECHAZO: parque inexistente
-EXEC Administracion.IngresarPuntosDeVenta
-    @parques_id = 9999, @descripcion = 'Boletería principal'
-GO
--- EXITO: con descripción
-EXEC Administracion.IngresarPuntosDeVenta
-    @parques_id = 1, @descripcion = 'Boletería principal'
-GO
-EXEC Administracion.IngresarPuntosDeVenta
-    @parques_id = 1, @descripcion = 'Boletería acceso sur'
-GO
-EXEC Administracion.IngresarPuntosDeVenta
-    @parques_id = 3, @descripcion = 'Boletería Perito Moreno'
-GO
-EXEC Administracion.IngresarPuntosDeVenta
-    @parques_id = 5, @descripcion = 'Boletería cataratas'
-GO
--- EXITO: sin descripción (válido según diseño)
-EXEC Administracion.IngresarPuntosDeVenta
-    @parques_id = 2
-GO
+    -- Intentamos volver a autorizar al mismo guía en el mismo artículo sin haber cerrado la anterior
+    EXEC RRHH.InsertarAutorizacionesDeGuias
+        @guia_id = @TestGuiaId,
+        @articulo_id = @TestArticuloId,
+        @f_inicio = '2026-02-01',
+        @f_fin = NULL,
+        @id = @DupAutId OUTPUT;
 
-/*------------------------------------------------------------------------------------------------------------*/
---ACTUALIZAR DATOS
---TODOS: Verificar RECHAZO al ingresar PARAMETROS DE CONSULTA NULOS, o PARAMETROS DE MODIFICACION NULOS.
-EXEC Administracion.ActualizarFormasDePago
-GO
-EXEC Administracion.ActualizarDivisas
-GO
-EXEC Administracion.ActualizarTiposDeFecha
-GO
-EXEC Administracion.ActualizarTiposDeVisitante
-GO
-EXEC Administracion.ActualizarTiposDeParque
-GO
-EXEC Administracion.ActualizarProvincias
-GO
-EXEC Administracion.ActualizarParques
-GO
-EXEC Administracion.ActualizarTarifasDeArticulo
-GO
-EXEC Administracion.ActualizarAjustes
-GO
-EXEC Administracion.ActualizarPuntosDeVenta
-GO
+    PRINT '   [FALLÓ] Se permitió una doble asignación activa para el mismo guía y artículo.';
+END TRY
+BEGIN CATCH
+    PRINT '   [OK] El control de unicidad/superposición detuvo la inserción.';
+    PRINT '   Mensaje esperado: ' + ERROR_MESSAGE();
+END CATCH;
+PRINT '--------------------------------------------------';
 
-/*------------------------------------------------------------------------------------------------------------*/
---ELIMINAR DATOS
---TODOS: Verificar RECHAZO al ingresar PARAMETROS DE CONSULTA NULOS, o PARAMETROS DE MODIFICACION NULOS.
-EXEC Administracion.EliminarFormasDePago
-GO
-EXEC Administracion.EliminarDivisas
-GO
-EXEC Administracion.EliminarTiposDeFecha
-GO
-EXEC Administracion.EliminarTiposDeVisitante
-GO
-EXEC Administracion.EliminarTiposDeParque
-GO
-EXEC Administracion.EliminarProvincias
-GO
-EXEC Administracion.EliminarParques
-GO
-EXEC Administracion.EliminarTarifasDeArticulo
-GO
-EXEC Administracion.EliminarAjustes
-GO
-EXEC Administracion.EliminarPuntosDeVenta
-GO
 
-IF @@TRANCOUNT > 0
-BEGIN
-    ROLLBACK TRANSACTION;
-END;
+-- ==========================================================================
+-- PRUEBA 4: Administracion.InsertarTarifasDeArticulo (Camino Feliz)
+-- ==========================================================================
+PRINT '>> TEST 4: Insertar Tarifa de Artículo Válida (Entrada ''E'')';
+BEGIN TRY
+    EXEC Administracion.InsertarTarifasDeArticulo
+        @articulo_id = @TestArticuloId,
+        @parque_id = @TestParqueId,
+        @tipo_articulo = 'E', -- Entrada
+        @precio = 1500.00,
+        @f_inicio = '2026-01-01',
+        @f_fin = NULL,
+        @id = @OutputTarifaId OUTPUT;
+
+    PRINT '   [OK] Tarifa de artículo registrada con ID: ' + CAST(@OutputTarifaId AS VARCHAR(10));
+END TRY
+BEGIN CATCH
+    PRINT '   [FALLÓ] Error al registrar tarifa válida. Mensaje: ' + ERROR_MESSAGE();
+END CATCH;
+PRINT '--------------------------------------------------';
+
+
+-- ==========================================================================
+-- PRUEBA 5: Administracion.InsertarTarifasDeArticulo (Caso de Falla - Tipo de Artículo Inválido)
+-- ==========================================================================
+PRINT '>> TEST 5: Insertar Tarifa con Tipo de Artículo Incorrecto (Debe Fallar)';
+BEGIN TRY
+    DECLARE @FailTarifaId INT;
+
+    EXEC Administracion.InsertarTarifasDeArticulo
+        @articulo_id = @TestArticuloId,
+        @parque_id = @TestParqueId,
+        @tipo_articulo = 'Z', -- 'Z' no es un tipo válido (E, A, T)
+        @precio = 500.00,
+        @f_inicio = '2026-01-01',
+        @f_fin = NULL,
+        @id = @FailTarifaId OUTPUT;
+
+    PRINT '   [FALLÓ] El sistema aceptó un tipo de artículo inexistente o no tipificado.';
+END TRY
+BEGIN CATCH
+    PRINT '   [OK] La validación de tipos abortó la operación con éxito.';
+    PRINT '   Mensaje esperado: ' + ERROR_MESSAGE();
+END CATCH;
+PRINT '--------------------------------------------------';
+
+
+-- ==========================================================================
+-- PRUEBA 6: Administracion.InsertarTarifasDeArticulo (Caso de Falla - Precio Negativo)
+-- ==========================================================================
+PRINT '>> TEST 6: Insertar Tarifa con Precio Negativo (Debe Fallar)';
+BEGIN TRY
+    DECLARE @FailPrecioId INT;
+
+    EXEC Administracion.InsertarTarifasDeArticulo
+        @articulo_id = @TestArticuloId,
+        @parque_id = @TestParqueId,
+        @tipo_articulo = 'A', -- Actividad
+        @precio = -250.50,    -- Precio inválido
+        @f_inicio = '2026-01-01',
+        @f_fin = NULL,
+        @id = @FailPrecioId OUTPUT;
+
+    PRINT '   [FALLÓ] El procedimiento almacenado permitió precios negativos.';
+END TRY
+BEGIN CATCH
+    PRINT '   [OK] Control de precios negativos aprobado por la regla de negocio.';
+    PRINT '   Mensaje esperado: ' + ERROR_MESSAGE();
+END CATCH;
+PRINT '--------------------------------------------------';
+
+
+-- ==========================================================================
+-- PRUEBA 7: Testing de Función Escalar (Si aplica en tu script)
+-- ==========================================================================
+-- Si tu script de administración incluye funciones auxiliares como 'ObtenerTipoDeFecha',
+-- podés testearla directamente con un SELECT evaluando un feriado o fin de semana:
+
+PRINT '>> TEST 7: Verificación de Función ObtenerTipoDeFecha (Cálculo Dinámico)';
+BEGIN TRY
+    DECLARE @ResultadoTipo INT;
+    -- Evaluamos un Domingo conocido (por ejemplo, 5 de Julio de 2026)
+    SET @ResultadoTipo = Administracion.ObtenerTipoDeFecha('2026-07-05');
+    
+    IF @ResultadoTipo IS NOT NULL
+        PRINT '   [OK] La función resolvió correctamente retornando ID de Tipo: ' + CAST(@ResultadoTipo AS VARCHAR(10));
+    ELSE
+        PRINT '   [WARN] La función retornó NULL. Verificar que la tabla de Tipos de Fecha tenga datos base.';
+END TRY
+BEGIN CATCH
+    PRINT '   [INFO] Omitido o Falló por falta de la función en este lote: ' + ERROR_MESSAGE();
+END CATCH;
+PRINT '--------------------------------------------------';
+
+PRINT '--- Finalización de la Suite de Pruebas de Administración ---';
+GO

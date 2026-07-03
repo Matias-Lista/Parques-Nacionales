@@ -7,7 +7,7 @@
      - Iván Gonzalez Fernandez
 
    #####################################
-   #       OperacionesAdministracion.sql      #
+   #       00_Operaciones_Administracion.sql      #
    #####################################
    El objetivo de este script es definir todos los 
    store procedures relacionados con las
@@ -352,8 +352,8 @@ CREATE OR ALTER PROCEDURE Administracion.IngresarParques
 	@nombre VARCHAR(100) = NULL,
 	@superficie INT = NULL,
     @año_creacion SMALLINT = NULL,
-	@latitud VARCHAR(50) = NULL,
-	@longitud VARCHAR(50) = NULL
+	@latitud DECIMAL(8, 4) = NULL,
+	@longitud DECIMAL(8, 4) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -731,7 +731,7 @@ END
 GO
 
 CREATE OR ALTER PROCEDURE Administracion.ActualizarCotizacionDivisa
-    @divisa_id VARCHAR(6) = NULL,
+    @divisa_id CHAR(3) = NULL,
     @f_consulta DATE = NULL
 AS
 BEGIN
@@ -739,21 +739,19 @@ BEGIN
 
     --Condiciones de falla
     --1. Si la divisa ingresada es la argentina
-    DECLARE @codigo_iso NVARCHAR(6) = (SELECT codigo_iso FROM Administracion.Divisas WHERE id = @divisa_id);
     DECLARE @condicion1 BIT = CASE 
-        WHEN @codigo_iso = 'ARS'
+        WHEN @divisa_id = 'ARS'
         THEN 1 ELSE 0 END;
 
     DECLARE @mensaje1 VARCHAR(100) = 'No puede calcularse el valor de la moneda argentina.';
 
     --2. Si la divisa ingresada es nula o inexistente
     DECLARE @condicion2 BIT = CASE 
-        WHEN @codigo_iso IS NULL 
-            OR @divisa_id IS NULL OR 
-            NOT EXISTS (SELECT 1 FROM Administracion.Divisas WHERE id = @divisa_id)
+        WHEN @divisa_id IS NULL OR 
+            NOT EXISTS (SELECT 1 FROM Administracion.Divisas WHERE codigo_iso = @divisa_id)
         THEN 1 ELSE 0 END;
 
-    DECLARE @mensaje2 VARCHAR(100) = 'El código ISO y la descripción no pueden ser nulos, o inexistentes.';
+    DECLARE @mensaje2 VARCHAR(100) = 'El código ISO no puede ser nulos, o inexistente.';
         
     --3. Si la fecha de actualización es menor a 24 horas (Política de la API)
     DECLARE @condicion3 BIT = CASE 
@@ -780,7 +778,7 @@ BEGIN
     BEGIN
         DECLARE @fecha_actualizacion VARCHAR(MAX) = CAST(@f_consulta AS VARCHAR(MAX));
         DECLARE @ResponseTable TABLE (JsonRaw VARCHAR(MAX));
-        DECLARE @link NVARCHAR(200) = CONCAT('https://api.frankfurter.dev/v2/rates?date=', @fecha_actualizacion ,'&base=', @codigo_iso, '&quotes=ARS');
+        DECLARE @link NVARCHAR(200) = CONCAT('https://api.frankfurter.dev/v2/rates?date=', @fecha_actualizacion ,'&base=', @divisa_id, '&quotes=ARS');
         DECLARE @Object INT;
         DECLARE @hr INT;
         DECLARE @FinalJSON VARCHAR(MAX);
@@ -808,7 +806,7 @@ BEGIN
             referida VARCHAR(4)  '$.quote',
             cotizacion  VARCHAR(20)  '$.rate'
         )
-        UPDATE Administracion.Divisas SET cotizacion = @cotizacion, f_actualizacion = GETDATE() WHERE id = @divisa_id;
+        UPDATE Administracion.Divisas SET cotizacion = @cotizacion, f_actualizacion = @f_consulta WHERE codigo_iso = @divisa_id;
     END
 END
 GO
@@ -1013,11 +1011,11 @@ CREATE OR ALTER PROCEDURE Administracion.ActualizarParques
 	@nombre VARCHAR(100) = NULL,
 	@superficie_km_2 INT = NULL,
     @año_creacion SMALLINT = NULL,
-    @latitud VARCHAR(50) = NULL,
-    @longitud VARCHAR(50) = NULL,
+    @latitud DECIMAL(8, 4) = NULL,
+    @longitud DECIMAL(8, 4) = NULL,
     --Parámetros de cambio
-    @latitud_nueva VARCHAR(50) = NULL,
-    @longitud_nueva VARCHAR(50) = NULL,
+    @latitud_nueva DECIMAL(8, 4) = NULL,
+    @longitud_nueva DECIMAL(8, 4) = NULL,
 	@nombre_nuevo VARCHAR(100) = NULL,
 	@superficie_nueva INT = NULL,
     @año_creacion_nuevo SMALLINT = NULL
@@ -1513,8 +1511,8 @@ CREATE OR ALTER PROCEDURE Administracion.EliminarParques
 	@nombre VARCHAR(100) = NULL,
 	@superficie_km_2 INT = NULL,
     @año_creacion SMALLINT = NULL,
-    @latitud VARCHAR(50) = NULL,
-    @longitud VARCHAR(50) = NULL
+    @latitud DECIMAL(8, 4) = NULL,
+    @longitud DECIMAL(8, 4) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;

@@ -7,7 +7,7 @@
      - Iván Gonzalez Fernandez
 
    #####################################
-   #  OperacionesConcesion_Testing.sql #
+   #  01_Operaciones_Concesion_Testing.sql #
    #####################################
 
    Este script prueba todos los store procedures relacionados a las Concesiones.

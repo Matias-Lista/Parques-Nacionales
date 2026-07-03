@@ -1,3 +1,20 @@
+/* #####################################
+   # Universidad Nacional de la Matanza#
+   #      Bases de Datos Aplicada      #
+   #####################################
+
+   Participan: 
+     - Iván Gonzalez Fernandez
+
+   #####################################
+   #       02_Importacion_RRHH.sql      #
+   #####################################
+   El objetivo de este script es definir todos los 
+   store procedures relacionados con la importación
+   y generación de datos dentro del esquema de
+   RRHH...
+*/
+
 USE ParquesNacionales
 GO
 
@@ -10,17 +27,39 @@ GO
 -- =============================================
 
 CREATE OR ALTER PROCEDURE RRHH.GenerarGuiasTuristicos
+(
+    @path_folder VARCHAR(MAX) = 'E:\evanrepos\Parques-Nacionales\Importacion\Otros\',
+    @name_file   VARCHAR(255) = 'data.json'
+)
 AS
 BEGIN
+    SET NOCOUNT ON;
+
     BEGIN TRY
         BEGIN TRANSACTION;
+
             DECLARE @json NVARCHAR(MAX);
 
-            SELECT @json = BulkColumn
-            FROM OPENROWSET(
-                BULK 'E:\evanrepos\Parques-Nacionales\Importacion\Otros\data.json',
-                SINGLE_CLOB
-            ) AS j
+            DECLARE @sql NVARCHAR(MAX);
+            DECLARE @path_file VARCHAR(MAX);
+
+            SET @path_file = CONCAT(
+                @path_folder,
+                CASE WHEN RIGHT(@path_folder, 1) = '\' THEN '' ELSE '\' END,
+                @name_file
+            );
+
+            SET @sql = N'
+                SELECT @json = BulkColumn
+                FROM OPENROWSET(
+                    BULK ''' + REPLACE(@path_file,'''','''''') + ''',
+                    SINGLE_CLOB
+                ) AS j;';
+
+            EXEC sp_executesql
+                @sql,
+                N'@json NVARCHAR(MAX) OUTPUT',
+                @json = @json OUTPUT;
 
             SELECT value INTO #Apellidos
             FROM OPENJSON(@json, '$.lastname')
@@ -104,17 +143,39 @@ GO
 -- =============================================
 
 CREATE OR ALTER PROCEDURE RRHH.GenerarGuardaparques
+(
+    @path_folder VARCHAR(MAX) = 'E:\evanrepos\Parques-Nacionales\Importacion\Otros\',
+    @name_file   VARCHAR(255) = 'data.json'
+)
 AS
 BEGIN
+    SET NOCOUNT ON;
+
     BEGIN TRY
         BEGIN TRANSACTION;
+
             DECLARE @json NVARCHAR(MAX);
 
-            SELECT @json = BulkColumn
-            FROM OPENROWSET(
-                BULK 'E:\evanrepos\Parques-Nacionales\Importacion\Otros\data.json',
-                SINGLE_CLOB
-            ) AS j
+            DECLARE @sql NVARCHAR(MAX);
+            DECLARE @path_file VARCHAR(MAX);
+
+            SET @path_file = CONCAT(
+                @path_folder,
+                CASE WHEN RIGHT(@path_folder, 1) = '\' THEN '' ELSE '\' END,
+                @name_file
+            );
+
+            SET @sql = N'
+                SELECT @json = BulkColumn
+                FROM OPENROWSET(
+                    BULK ''' + REPLACE(@path_file,'''','''''') + ''',
+                    SINGLE_CLOB
+                ) AS j;';
+
+            EXEC sp_executesql
+                @sql,
+                N'@json NVARCHAR(MAX) OUTPUT',
+                @json = @json OUTPUT;
 
             SELECT value INTO #Apellidos
             FROM OPENJSON(@json, '$.lastname')

@@ -1,3 +1,18 @@
+/* #####################################
+   # Universidad Nacional de la Matanza#
+   #      Bases de Datos Aplicada      #
+   #####################################
+
+   Participan: 
+     - Iván Gonzalez Fernandez
+
+   #####################################
+   #       03_Creacion_Tablas.sql      #
+   #####################################
+   El objetivo de este script es definir todas las
+   tablas y su estructura...
+*/
+
 USE ParquesNacionales;
 GO
 
@@ -81,8 +96,8 @@ BEGIN
     	nombre VARCHAR(100) NOT NULL,
     	superficie_km_2 INT NOT NULL,
         año_creacion SMALLINT NOT NULL,
-    	latitud VARCHAR(50) NOT NULL,
-    	longitud VARCHAR(50) NOT NULL
+    	latitud DECIMAL(8, 4) NOT NULL,
+    	longitud DECIMAL(8, 4) NOT NULL
     );
 END
 GO
@@ -248,7 +263,8 @@ BEGIN
         cotizacion DECIMAL(19, 6),
         f_generacion SMALLDATETIME NOT NULL,
         tipo_fecha_id INT NOT NULL,
-        total DECIMAL(12, 2)
+        cant_visitantes INT NOT NULL,
+        total DECIMAL(12, 2) NULL
     );
 END
 GO
@@ -287,7 +303,7 @@ BEGIN
         tarifa_id INT NOT NULL,
         ticket_id INT NOT NULL,
         f_visita SMALLDATETIME NOT NULL,
-        precio DECIMAL(10, 2) NOT NULL
+        precio DECIMAL(10, 2) NULL
     );
 END
 GO
@@ -311,7 +327,10 @@ BEGIN
         tipo_fecha_id INT NOT NULL,
         tipo_visitante_id INT NOT NULL,
         f_visita SMALLDATETIME NOT NULL,
-        precio DECIMAL(10, 2) NOT NULL
+        precio DECIMAL(10, 2) NULL
     );
 END
 GO
+
+ALTER TABLE Ventas.Actividades
+    ALTER COLUMN precio DECIMAL(10, 2) NULL

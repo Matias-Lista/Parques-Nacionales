@@ -7,7 +7,7 @@
      - Iván Gonzalez Fernandez
 
    #####################################
-   #       OperacionesGuias.sql      #
+   #       00_Operaciones_Guias.sql      #
    #####################################
    El objetivo de este script es definir todos los 
    store procedures relacionados con las

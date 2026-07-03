@@ -1,3 +1,19 @@
+/* #####################################
+   # Universidad Nacional de la Matanza#
+   #      Bases de Datos Aplicada      #
+   #####################################
+
+   Participan: 
+     - Iván Gonzalez Fernandez
+
+   #####################################
+   #       05_Indices.sql      #
+   #####################################
+   El objetivo de este script es implementar índices
+   que pueden ayudar a agilizar el proceso de las
+   consultas...
+*/
+
 USE ParquesNacionales
 GO
 

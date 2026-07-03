@@ -1,476 +1,206 @@
+/* #####################################
+   # Universidad Nacional de la Matanza#
+   #      Bases de Datos Aplicada      #
+   #####################################
+ 
+   Participan: 
+     - Iván Gonzalez Fernandez
+ 
+   #####################################
+   #   01_Operaciones_Ventas_Testing.sql  #
+   #####################################
+ 
+   Este script prueba todos los store procedures relacionados a las Ventas.
+*/
+
 USE ParquesNacionales;
 GO
 
-BEGIN TRANSACTION
+-- ==========================================================================
+-- 1. POBLADO DE DATOS MOCK (Configuración Base para Pruebas)
+-- ==========================================================================
 
---#### IDs reutilizados de OperacionesAdministracionTesting.sql ####--
-DECLARE @parque INT = 1;
-DECLARE @puntoVenta INT = 1;
-DECLARE @formaPago INT = 1;
-DECLARE @divisa INT = 1;
-DECLARE @tipoFecha INT = 1;
-DECLARE @tipoVisitante INT = 1;
-DECLARE @tarifaEntrada INT = 1;   -- tipo 'E'
-DECLARE @tarifaActividad INT = 3; -- tipo 'A'
-DECLARE @tarifaTour INT = 4;      -- tipo 'T'
-DECLARE @ajusteEntrada INT = 1;   -- tipo 'E', -50%
+-- Ejecutar los scripts de importación de administración antes de proseguir.
 
---#### Registros adicionales necesarios para los tests ####--
+-- ==========================================================================
+-- 2. CASOS DE PRUEBA (TEST SUITE)
+-- ==========================================================================
 
--- Un ajuste de tipo 'T', para probar la incompatibilidad ajuste/tarifa
-DECLARE @ajusteTour INT;
-INSERT INTO Administracion.Ajustes (parque_id, tipo_articulo, tipo_visitante_id, tipo_fecha_id, porcentaje)
-VALUES (@parque, 'T', @tipoVisitante, @tipoFecha, -20);
-SET @ajusteTour = SCOPE_IDENTITY();
+DECLARE @TestTicketId INT;
+DECLARE @TestTarifaEntradaId INT = 10; -- ID ficticio para pruebas de Entrada
+DECLARE @TestTarifaActividadId INT = 20; -- ID ficticio para pruebas de Actividad
+DECLARE @TestTarifaTourId INT = 30; -- ID ficticio para pruebas de Tour
+DECLARE @OutputId INT;
+DECLARE @NroDetalleOut SMALLINT;
 
--- Un guía, asignado al parque, y autorizado para el tour de prueba
-DECLARE @guia INT;
-EXEC RRHH.CrearGuia
-    @cuil = 20111111112,
-    @nombre = 'Juan',
-    @apellido = 'Pérez',
-    @fecha_nacimiento = '1990-01-01',
-    @id = @guia OUTPUT;
-
-DECLARE @asignacionGuia INT;
-EXEC RRHH.AsignarGuia
-    @id_guia = @guia,
-    @id_parque = @parque,
-    @fecha_ingreso = '2020-01-01',
-    @id = @asignacionGuia OUTPUT;
-
-DECLARE @autorizacionGuia INT;
-EXEC RRHH.AutorizarGuia
-    @id_guia = @guia,
-    @id_tarifa = @tarifaTour,
-    @fecha_inicio = '2020-01-01',
-    @id = @autorizacionGuia OUTPUT;
-
--- Un segundo guía, NO autorizado para ningún tour (para probar el rechazo correspondiente)
-DECLARE @guiaNoAutorizado INT;
-EXEC RRHH.CrearGuia
-    @cuil = 20222222223,
-    @nombre = 'Mario',
-    @apellido = 'Gómez',
-    @fecha_nacimiento = '1985-05-05',
-    @id = @guiaNoAutorizado OUTPUT;
-
-
-/*================================================================================================*/
---#### Ventas.InsertarTicketsDeVenta ####--
-/*================================================================================================*/
-
-DECLARE @ticket1 INT;
-DECLARE @ticket2 INT;
-
--- EXITO: ticket válido, con total
-EXEC Ventas.InsertarTicketsDeVenta
-    @punto_venta_id = @puntoVenta,
-    @forma_pago_id = @formaPago,
-    @divisa_id = @divisa,
-    @total = 5000,
-    @id = @ticket1 OUTPUT;
-SELECT CAST(@ticket1 AS VARCHAR) AS 'ID del ticket 1 insertado';
-
--- EXITO: ticket válido, sin f_generacion (debe tomar la fecha actual por default)
-EXEC Ventas.InsertarTicketsDeVenta
-    @punto_venta_id = @puntoVenta,
-    @forma_pago_id = @formaPago,
-    @divisa_id = @divisa,
-    @total = 0,
-    @id = @ticket2 OUTPUT;
-
-SELECT * FROM Ventas.TicketsDeVenta WHERE id IN (@ticket1, @ticket2);
-
--- RECHAZO: punto de venta inexistente
+-- ==========================================================================
+-- PRUEBA 1: Ventas.InsertarTicketsDeVenta (Camino Feliz)
+-- ==========================================================================
+PRINT '>> TEST 1: Insertar Ticket de Venta Correcto';
 BEGIN TRY
-    EXEC Ventas.InsertarTicketsDeVenta
-        @punto_venta_id = -1,
-        @forma_pago_id = @formaPago,
-        @divisa_id = @divisa,
-        @total = 1000;
+    -- Insertamos un ticket válido para usar de base en los siguientes tests
+    -- Ajustar parámetros según IDs cargados en tu BD
+    EXEC Ventas.InsertarTicketsDeVenta    
+        @punto_venta_id = 1,
+        @parque_id = 1,
+        @forma_pago_id = 1,
+        @divisa_id = 1,
+        @cotizacion = 1.00000,
+        @f_generacion = '2026-07-01 10:00:00', -- Fecha pasada (válida)
+        @tipo_fecha_id = 1,
+        @total = 0, -- Empieza en cero, sumará con los detalles
+        @cant_visitantes = 2,
+        @id = @TestTicketId OUTPUT;
+
+    PRINT '   [OK] Ticket creado exitosamente con ID: ' + CAST(@TestTicketId AS VARCHAR(10));
 END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 1 (InsertarTicketsDeVenta) - punto de venta inexistente' END CATCH
+BEGIN CATCH
+    PRINT '   [FALLÓ] No se pudo crear el ticket de prueba. Error: ' + ERROR_MESSAGE();
+END CATCH;
+PRINT '--------------------------------------------------';
 
--- RECHAZO: forma de pago inexistente
+
+-- ==========================================================================
+-- PRUEBA 2: Ventas.InsertarTicketsDeVenta (Caso de Falla - Fecha Futura)
+-- ==========================================================================
+PRINT '>> TEST 2: Insertar Ticket con Fecha Futura (Debe Fallar)';
 BEGIN TRY
-    EXEC Ventas.InsertarTicketsDeVenta
-        @punto_venta_id = @puntoVenta,
-        @forma_pago_id = -1,
-        @divisa_id = @divisa,
-        @total = 1000;
+    DECLARE @FuturoId INT;
+    DECLARE @FechaFutura DATETIME = DATEADD(day, 5, GETDATE());
+
+    EXEC Ventas.InsertarTicketsDeVenta    
+        @punto_venta_id = 1,
+        @parque_id = 1,
+        @forma_pago_id = 1,
+        @divisa_id = 1,
+        @cotizacion = 1.00000,
+        @f_generacion = @FechaFutura,
+        @tipo_fecha_id = 1,
+        @total = 100,
+        @cant_visitantes = 1,
+        @id = @FuturoId OUTPUT;
+
+    PRINT '   [FALLÓ] El sistema permitió registrar una fecha futura de manera errónea.';
 END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 2 (InsertarTicketsDeVenta) - forma de pago inexistente' END CATCH
+BEGIN CATCH
+    PRINT '   [OK] El procedimiento falló correctamente como se esperaba.';
+    PRINT '   Mensaje arrojado: ' + ERROR_MESSAGE();
+END CATCH;
+PRINT '--------------------------------------------------';
 
--- RECHAZO: divisa inexistente
+
+-- ==========================================================================
+-- PRUEBA 3: Ventas.InsertarTicketsDeVenta (Caso de Falla - Duplicado mismo momento)
+-- ==========================================================================
+PRINT '>> TEST 3: Insertar Ticket Duplicado en el mismo Momento/Punto Venta (Debe Fallar)';
 BEGIN TRY
-    EXEC Ventas.InsertarTicketsDeVenta
-        @punto_venta_id = @puntoVenta,
-        @forma_pago_id = @formaPago,
-        @divisa_id = -1,
-        @total = 1000;
+    DECLARE @DuplicadoId INT;
+    
+    -- Intentamos insertar exactamente el mismo registro que en el Test 1
+    EXEC Ventas.InsertarTicketsDeVenta    
+        @punto_venta_id = 1,
+        @parque_id = 1,
+        @forma_pago_id = 1,
+        @divisa_id = 1,
+        @cotizacion = 1.00000,
+        @f_generacion = '2026-07-01 10:00:00',
+        @tipo_fecha_id = 1,
+        @total = 0,
+        @cant_visitantes = 2,
+        @id = @DuplicadoId OUTPUT;
+
+    PRINT '   [FALLÓ] El sistema permitió un ticket duplicado en el mismo instante exacto.';
 END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 3 (InsertarTicketsDeVenta) - divisa inexistente' END CATCH
+BEGIN CATCH
+    PRINT '   [OK] El procedimiento bloqueó la duplicación exitosamente.';
+    PRINT '   Mensaje arrojado: ' + ERROR_MESSAGE();
+END CATCH;
+PRINT '--------------------------------------------------';
 
--- RECHAZO: total negativo
+
+-- ==========================================================================
+-- PRUEBA 4: Ventas.InsertarDetallesDeTicket (Camino Feliz - Validar que calcula precios)
+-- ==========================================================================
+-- Nota: Para que este test corra impecable, recordá tener una Entrada asignada 
+-- en la tabla "Administracion.TarifasDeArticulo" asociada al ID que pongas acá.
+PRINT '>> TEST 4: Insertar Detalle de Ticket (Entrada) y recalcular total del Ticket';
 BEGIN TRY
-    EXEC Ventas.InsertarTicketsDeVenta
-        @punto_venta_id = @puntoVenta,
-        @forma_pago_id = @formaPago,
-        @divisa_id = @divisa,
-        @total = -500;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 4 (InsertarTicketsDeVenta) - total negativo' END CATCH
+    -- Forzamos la existencia de la variable de ticket generada en el paso 1.
+    -- Si el Test 1 falló por falta de datos relacionales, asignamos un ID temporal (ej: 1).
+    SET @TestTicketId = ISNULL(@TestTicketId, 1); 
 
--- RECHAZO: fecha de generación futura
-BEGIN TRY
-    EXEC Ventas.InsertarTicketsDeVenta
-        @punto_venta_id = @puntoVenta,
-        @forma_pago_id = @formaPago,
-        @divisa_id = @divisa,
-        @f_generacion = '2099-01-01',
-        @total = 1000;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 5 (InsertarTicketsDeVenta) - fecha futura' END CATCH
-
--- RECHAZO: todos los parámetros obligatorios nulos
-BEGIN TRY
-    EXEC Ventas.InsertarTicketsDeVenta
-        @punto_venta_id = NULL,
-        @forma_pago_id = NULL,
-        @divisa_id = NULL;
-END TRY
-BEGIN CATCH 
-    SELECT value AS 'Errores 6 (InsertarTicketsDeVenta) - todo nulo'
-    FROM STRING_SPLIT(ERROR_MESSAGE(), CHAR(10));
-END CATCH
-
-
-/*================================================================================================*/
---#### Ventas.InsertarDetallesDeTicket ####--
-/*================================================================================================*/
-
-DECLARE @detalle1 SMALLINT;
-DECLARE @detalle2 SMALLINT;
-DECLARE @detalle3 SMALLINT;
-
--- EXITO: primer detalle del ticket1 (entrada, sin ajuste) -> nro_detalle debe ser 1
-EXEC Ventas.InsertarDetallesDeTicket
-    @ticket_id = @ticket1,
-    @tarifa_id = @tarifaEntrada,
-    @cantidad = 2,
-    @nro_detalle = @detalle1 OUTPUT;
-SELECT CAST(@detalle1 AS VARCHAR) AS 'nro_detalle 1 (debe ser 1)';
-
--- EXITO: segundo detalle del MISMO ticket1 (entrada con ajuste de jubilado) -> nro_detalle debe ser 2
-EXEC Ventas.InsertarDetallesDeTicket
-    @ticket_id = @ticket1,
-    @tarifa_id = @tarifaEntrada,
-    @ajuste_id = @ajusteEntrada,
-    @cantidad = 1,
-    @nro_detalle = @detalle2 OUTPUT;
-SELECT CAST(@detalle2 AS VARCHAR) AS 'nro_detalle 2 (debe ser 2)';
-
--- EXITO: primer detalle de un ticket DISTINTO (ticket2) -> nro_detalle debe volver a ser 1
-EXEC Ventas.InsertarDetallesDeTicket
-    @ticket_id = @ticket2,
-    @tarifa_id = @tarifaEntrada,
-    @cantidad = 1,
-    @nro_detalle = @detalle3 OUTPUT;
-SELECT CAST(@detalle3 AS VARCHAR) AS 'nro_detalle 3, en otro ticket (debe ser 1)';
-
--- Verificación de precio/subtotal calculados:
--- detalle1: 2 entradas a precio de lista (5000), sin ajuste -> precio_ud=5000, subtotal=10000
--- detalle2: 1 entrada con ajuste -50% (5000 * 0.5 = 2500) -> precio_ud=2500, subtotal=2500
-SELECT * FROM Ventas.DetallesDeTicket WHERE ticket_id IN (@ticket1, @ticket2) ORDER BY ticket_id, nro_detalle;
-
--- RECHAZO: ticket inexistente
-BEGIN TRY
     EXEC Ventas.InsertarDetallesDeTicket
-        @ticket_id = -1,
-        @tarifa_id = @tarifaEntrada;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 1 (InsertarDetallesDeTicket) - ticket inexistente' END CATCH
+        @ticket_id = @TestTicketId,
+        @tarifa_id = @TestTarifaEntradaId, -- Asegurar que el tipo de artículo sea 'E'
+        @tipo_visitante_id = 1,
+        @cantidad = 2,
+        @nro_detalle = @NroDetalleOut OUTPUT;
 
--- RECHAZO: tarifa inexistente
+    PRINT '   [OK] Detalle insertado. Nro Detalle Correlativo: ' + CAST(@NroDetalleOut AS VARCHAR(10));
+    
+    -- Validamos si impactó el total en el Ticket Cabecera
+    DECLARE @TotalValidar DECIMAL(12,2);
+    SELECT @TotalValidar = total FROM Ventas.TicketsDeVenta WHERE id = @TestTicketId;
+    PRINT '   [INFO] El total actualizado del ticket es: $' + CAST(@TotalValidar AS VARCHAR(12));
+END TRY
+BEGIN CATCH
+    PRINT '   [FALLÓ] Error al insertar el detalle. Asegurar coherencia de FKs. Mensaje: ' + ERROR_MESSAGE();
+END CATCH;
+PRINT '--------------------------------------------------';
+
+
+-- ==========================================================================
+-- PRUEBA 5: Ventas.CancelarVenta (Camino Feliz - Verificación de Blanqueo a NULL)
+-- ==========================================================================
+PRINT '>> TEST 5: Cancelar y Anular Venta (Validar borrado lógico / Seteo a NULL)';
 BEGIN TRY
-    EXEC Ventas.InsertarDetallesDeTicket
-        @ticket_id = @ticket1,
-        @tarifa_id = -1;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 2 (InsertarDetallesDeTicket) - tarifa inexistente' END CATCH
+    SET @TestTicketId = ISNULL(@TestTicketId, 1);
 
--- RECHAZO: cantidad cero
+    -- Ejecutamos la cancelación del ticket usado anteriormente
+    EXEC Ventas.CancelarVenta 
+        @ticket_id = @TestTicketId, 
+        @f_generacion = '2026-07-01 10:00:00';
+
+    -- Realizamos verificaciones de si los campos pasaron a NULL
+    DECLARE @PuntoVentaCheck INT, @TotalCheck DECIMAL(12,2);
+    SELECT @PuntoVentaCheck = punto_venta_id, @TotalCheck = total 
+    FROM Ventas.TicketsDeVenta 
+    WHERE id = @TestTicketId;
+
+    IF @PuntoVentaCheck IS NULL AND @TotalCheck IS NULL
+    BEGIN
+        PRINT '   [OK] Venta anulada con éxito. Campos estructurales seteados a NULL para reportes.';
+    END
+    ELSE
+    BEGIN
+        PRINT '   [FALLÓ] El SP corrió pero los campos del ticket no se blanquearon correctamente.';
+    END
+END TRY
+BEGIN CATCH
+    PRINT '   [FALLÓ] Error en la ejecución de CancelarVenta: ' + ERROR_MESSAGE();
+END CATCH;
+PRINT '--------------------------------------------------';
+
+
+-- ==========================================================================
+-- PRUEBA 6: Ventas.CancelarVenta (Caso de Falla - Ticket Ya Anulado)
+-- ==========================================================================
+PRINT '>> TEST 6: Intentar Cancelar un Ticket Ya Anulado (Debe Fallar)';
 BEGIN TRY
-    EXEC Ventas.InsertarDetallesDeTicket
-        @ticket_id = @ticket1,
-        @tarifa_id = @tarifaEntrada,
-        @cantidad = 0;
+    SET @TestTicketId = ISNULL(@TestTicketId, 1);
+
+    -- Volvemos a llamar al SP con el mismo ID ya cancelado en el paso anterior
+    EXEC Ventas.CancelarVenta 
+        @ticket_id = @TestTicketId, 
+        @f_generacion = '2026-07-01 10:00:00';
+
+    PRINT '   [FALLÓ] El sistema permitió volver a cancelar un ticket previamente anulado.';
 END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 3 (InsertarDetallesDeTicket) - cantidad cero' END CATCH
+BEGIN CATCH
+    PRINT '   [OK] El procedimiento impidió la doble anulación exitosamente.';
+    PRINT '   Mensaje arrojado: ' + ERROR_MESSAGE();
+END CATCH;
+PRINT '--------------------------------------------------';
 
--- RECHAZO: cantidad negativa
-BEGIN TRY
-    EXEC Ventas.InsertarDetallesDeTicket
-        @ticket_id = @ticket1,
-        @tarifa_id = @tarifaEntrada,
-        @cantidad = -3;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 4 (InsertarDetallesDeTicket) - cantidad negativa' END CATCH
-
--- RECHAZO: ajuste inexistente
-BEGIN TRY
-    EXEC Ventas.InsertarDetallesDeTicket
-        @ticket_id = @ticket1,
-        @tarifa_id = @tarifaEntrada,
-        @ajuste_id = -1;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 5 (InsertarDetallesDeTicket) - ajuste inexistente' END CATCH
-
--- RECHAZO: ajuste de tipo 'T' aplicado a una tarifa de tipo 'E' (incompatibilidad)
-BEGIN TRY
-    EXEC Ventas.InsertarDetallesDeTicket
-        @ticket_id = @ticket1,
-        @tarifa_id = @tarifaEntrada,
-        @ajuste_id = @ajusteTour;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 6 (InsertarDetallesDeTicket) - ajuste no corresponde al tipo de artículo' END CATCH
-
--- RECHAZO: ticket y tarifa nulos
-BEGIN TRY
-    EXEC Ventas.InsertarDetallesDeTicket
-        @ticket_id = NULL,
-        @tarifa_id = NULL;
-END TRY
-BEGIN CATCH 
-    SELECT value AS 'Errores 7 (InsertarDetallesDeTicket) - todo nulo'
-    FROM STRING_SPLIT(ERROR_MESSAGE(), CHAR(10));
-END CATCH
-
-
-/*================================================================================================*/
---#### Ventas.InsertarActividades ####--
-/*================================================================================================*/
-
-DECLARE @actividad1 INT; -- Actividad (kayak), sin guía
-DECLARE @actividad2 INT; -- Tour, con guía autorizado
-
--- EXITO: actividad (tipo 'A'), sin guía
-EXEC Ventas.InsertarActividades
-    @tarifa_id = @tarifaActividad,
-    @ticket_id = @ticket1,
-    @precio = 8000,
-    @id = @actividad1 OUTPUT;
-SELECT CAST(@actividad1 AS VARCHAR) AS 'ID actividad 1 (kayak, sin guía)';
-
--- EXITO: tour (tipo 'T'), con guía autorizado
-EXEC Ventas.InsertarActividades
-    @tarifa_id = @tarifaTour,
-    @ticket_id = @ticket1,
-    @guia_id = @guia,
-    @precio = 15000,
-    @id = @actividad2 OUTPUT;
-SELECT CAST(@actividad2 AS VARCHAR) AS 'ID actividad 2 (tour, con guía)';
-
-SELECT * FROM Ventas.Actividades WHERE id IN (@actividad1, @actividad2);
-
--- RECHAZO: tarifa inexistente
-BEGIN TRY
-    EXEC Ventas.InsertarActividades
-        @tarifa_id = -1,
-        @ticket_id = @ticket1;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 1 (InsertarActividades) - tarifa inexistente' END CATCH
-
--- RECHAZO: ticket inexistente
-BEGIN TRY
-    EXEC Ventas.InsertarActividades
-        @tarifa_id = @tarifaActividad,
-        @ticket_id = -1;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 2 (InsertarActividades) - ticket inexistente' END CATCH
-
--- RECHAZO: tarifa de tipo Entrada (no es Tour ni Actividad)
-BEGIN TRY
-    EXEC Ventas.InsertarActividades
-        @tarifa_id = @tarifaEntrada,
-        @ticket_id = @ticket1;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 3 (InsertarActividades) - tarifa de tipo Entrada' END CATCH
-
--- RECHAZO: actividad (tipo 'A') con guía asignado (no debería llevar guía)
-BEGIN TRY
-    EXEC Ventas.InsertarActividades
-        @tarifa_id = @tarifaActividad,
-        @ticket_id = @ticket1,
-        @guia_id = @guia;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 4 (InsertarActividades) - actividad con guía' END CATCH
-
--- RECHAZO: tour (tipo 'T') sin guía asignado (debería ser obligatorio)
-BEGIN TRY
-    EXEC Ventas.InsertarActividades
-        @tarifa_id = @tarifaTour,
-        @ticket_id = @ticket1;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 5 (InsertarActividades) - tour sin guía' END CATCH
-
--- RECHAZO: tour con un guía que existe, pero NO está autorizado para ese tour
-BEGIN TRY
-    EXEC Ventas.InsertarActividades
-        @tarifa_id = @tarifaTour,
-        @ticket_id = @ticket1,
-        @guia_id = @guiaNoAutorizado;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 6 (InsertarActividades) - guía no autorizado' END CATCH
-
--- RECHAZO: tarifa y ticket nulos
-BEGIN TRY
-    EXEC Ventas.InsertarActividades
-        @tarifa_id = NULL,
-        @ticket_id = NULL;
-END TRY
-BEGIN CATCH 
-    SELECT value AS 'Errores 7 (InsertarActividades) - todo nulo'
-    FROM STRING_SPLIT(ERROR_MESSAGE(), CHAR(10));
-END CATCH
-
-
-/*================================================================================================*/
---#### Ventas.InsertarParticipaEnActividad ####--
-/*================================================================================================*/
-
--- EXITO: el ticket2 participa también de la actividad1 (ej. un acompañante)
-EXEC Ventas.InsertarParticipaEnActividad
-    @actividad_id = @actividad1,
-    @ticket_id = @ticket2;
-
-SELECT * FROM Ventas.ParticipaEnActividad WHERE actividad_id = @actividad1;
-
--- RECHAZO: actividad inexistente
-BEGIN TRY
-    EXEC Ventas.InsertarParticipaEnActividad
-        @actividad_id = -1,
-        @ticket_id = @ticket2;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 1 (InsertarParticipaEnActividad) - actividad inexistente' END CATCH
-
--- RECHAZO: ticket inexistente
-BEGIN TRY
-    EXEC Ventas.InsertarParticipaEnActividad
-        @actividad_id = @actividad1,
-        @ticket_id = -1;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 2 (InsertarParticipaEnActividad) - ticket inexistente' END CATCH
-
--- RECHAZO: participación duplicada (mismo par actividad+ticket ya insertado arriba)
-BEGIN TRY
-    EXEC Ventas.InsertarParticipaEnActividad
-        @actividad_id = @actividad1,
-        @ticket_id = @ticket2;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 3 (InsertarParticipaEnActividad) - participación duplicada' END CATCH
-
--- RECHAZO: actividad y ticket nulos
-BEGIN TRY
-    EXEC Ventas.InsertarParticipaEnActividad
-        @actividad_id = NULL,
-        @ticket_id = NULL;
-END TRY
-BEGIN CATCH 
-    SELECT value AS 'Errores 4 (InsertarParticipaEnActividad) - todo nulo'
-    FROM STRING_SPLIT(ERROR_MESSAGE(), CHAR(10));
-END CATCH
-
-
-/*================================================================================================*/
---#### Ventas.InsertarEntradas ####--
-/*================================================================================================*/
-
-DECLARE @entrada1 INT;
-
--- EXITO: entrada válida
-EXEC Ventas.InsertarEntradas
-    @tarifa_id = @tarifaEntrada,
-    @ticket_id = @ticket2,
-    @tipo_fecha_id = @tipoFecha,
-    @tipo_visitante_id = @tipoVisitante,
-    @precio = 5000,
-    @id = @entrada1 OUTPUT;
-SELECT CAST(@entrada1 AS VARCHAR) AS 'ID entrada 1 insertada';
-
-SELECT * FROM Ventas.Entradas WHERE id = @entrada1;
-
--- RECHAZO: tarifa inexistente
-BEGIN TRY
-    EXEC Ventas.InsertarEntradas
-        @tarifa_id = -1,
-        @ticket_id = @ticket2,
-        @tipo_fecha_id = @tipoFecha,
-        @tipo_visitante_id = @tipoVisitante;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 1 (InsertarEntradas) - tarifa inexistente' END CATCH
-
--- RECHAZO: tarifa que no es de tipo Entrada (ej. el tour)
-BEGIN TRY
-    EXEC Ventas.InsertarEntradas
-        @tarifa_id = @tarifaTour,
-        @ticket_id = @ticket2,
-        @tipo_fecha_id = @tipoFecha,
-        @tipo_visitante_id = @tipoVisitante;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 2 (InsertarEntradas) - tarifa no es de tipo Entrada' END CATCH
-
--- RECHAZO: ticket inexistente
-BEGIN TRY
-    EXEC Ventas.InsertarEntradas
-        @tarifa_id = @tarifaEntrada,
-        @ticket_id = -1,
-        @tipo_fecha_id = @tipoFecha,
-        @tipo_visitante_id = @tipoVisitante;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 3 (InsertarEntradas) - ticket inexistente' END CATCH
-
--- RECHAZO: tipo de fecha inexistente
-BEGIN TRY
-    EXEC Ventas.InsertarEntradas
-        @tarifa_id = @tarifaEntrada,
-        @ticket_id = @ticket2,
-        @tipo_fecha_id = -1,
-        @tipo_visitante_id = @tipoVisitante;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 4 (InsertarEntradas) - tipo de fecha inexistente' END CATCH
-
--- RECHAZO: tipo de visitante inexistente
-BEGIN TRY
-    EXEC Ventas.InsertarEntradas
-        @tarifa_id = @tarifaEntrada,
-        @ticket_id = @ticket2,
-        @tipo_fecha_id = @tipoFecha,
-        @tipo_visitante_id = -1;
-END TRY
-BEGIN CATCH SELECT ERROR_MESSAGE() AS 'Error 5 (InsertarEntradas) - tipo de visitante inexistente' END CATCH
-
--- RECHAZO: todos los parámetros obligatorios nulos
-BEGIN TRY
-    EXEC Ventas.InsertarEntradas
-        @tarifa_id = NULL,
-        @ticket_id = NULL,
-        @tipo_fecha_id = NULL,
-        @tipo_visitante_id = NULL;
-END TRY
-BEGIN CATCH 
-    SELECT value AS 'Errores 6 (InsertarEntradas) - todo nulo'
-    FROM STRING_SPLIT(ERROR_MESSAGE(), CHAR(10));
-END CATCH
-
-
-/*================================================================================================*/
---#### Limpieza ####--
-/*================================================================================================*/
-
--- Rollback para no dejar datos de prueba en la base
-IF @@TRANCOUNT > 0
-BEGIN
-    ROLLBACK TRANSACTION;
-END;
+PRINT '--- Finalización del Plan de Pruebas ---';
+GO

@@ -1,3 +1,20 @@
+/* #####################################
+   # Universidad Nacional de la Matanza#
+   #      Bases de Datos Aplicada      #
+   #####################################
+
+   Participan: 
+     - Iván Gonzalez Fernandez
+
+   #####################################
+   #       02_Importacion_Administracion.sql      #
+   #####################################
+   El objetivo de este script es definir todos los 
+   store procedures relacionados con la importación
+   y generación de datos dentro del esquema de
+   Administración...
+*/
+
 USE ParquesNacionales
 GO
 
@@ -5,6 +22,59 @@ SET NOCOUNT ON
 GO
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+CREATE OR ALTER FUNCTION Administracion.PasarCoordenadasADecimal (@coordenadas VARCHAR(100))
+RETURNS DECIMAL(8,4)
+AS
+BEGIN
+    DECLARE
+        @grados INT,
+        @minutos INT,
+        @segundos INT,
+        @signo INT = 1,
+        @decimal DECIMAL(12,8);
+
+    IF RIGHT(@coordenadas,1) IN ('S','O','W')
+        SET @signo = -1;
+
+    SET @coordenadas = REPLACE(@coordenadas,'"','''');
+    SET @coordenadas = REPLACE(@coordenadas,'´','''');
+
+    SET @grados =
+        LEFT(@coordenadas,CHARINDEX('°',@coordenadas)-1);
+
+    SET @minutos =
+        SUBSTRING(
+            @coordenadas,
+            CHARINDEX('°',@coordenadas)+1,
+            CHARINDEX('''',@coordenadas)-CHARINDEX('°',@coordenadas)-1
+        );
+
+    DECLARE @posPrimerComilla INT =
+        CHARINDEX('''',@coordenadas);
+
+    DECLARE @posSegundaComilla INT =
+        CHARINDEX('''',@coordenadas,@posPrimerComilla+2);
+
+    SET @segundos =
+        SUBSTRING(
+            @coordenadas,
+            @posPrimerComilla+1,
+            @posSegundaComilla-@posPrimerComilla-1
+        );
+
+    SET @decimal =
+        @signo * (
+            @grados +
+            @minutos/60.0 +
+            @segundos/3600.0
+        );
+
+    RETURN CAST(@decimal AS DECIMAL(8,4));
+
+END;
+GO
+
 -- =============================================
 -- FormasDePago (GENERABLE)
 -- =============================================
@@ -98,7 +168,7 @@ BEGIN
                 DECLARE @fecha_hoy DATE = GETDATE();
 
                 IF @codigo_iso <> 'ARS'
-                    EXEC Administracion.ActualizarCotizacionDivisa @divisa_id = @id_divisa, @f_consulta = @fecha_hoy;
+                    EXEC Administracion.ActualizarCotizacionDivisa @divisa_id = @codigo_iso, @f_consulta = @fecha_hoy;
 
                 SET @indice_divisa = @indice_divisa + 1;
             END
@@ -246,55 +316,56 @@ GO
 -- =============================================
 
 CREATE OR ALTER PROCEDURE Administracion.GenerarTiposDeParque
+(
+    @path_folder VARCHAR(MAX) = 'E:\evanrepos\Parques-Nacionales\Importacion\AreasProtegidas\',
+    @name_file   VARCHAR(255) = 'AreasProtegidas.xlsx',
+    @sheet_name  SYSNAME = 'Areas_Protegidas$'
+)
 AS
 BEGIN
+    SET NOCOUNT ON;
+
     BEGIN TRY
         BEGIN TRANSACTION;
-        
-        CREATE TABLE #Parques (
-            id INT IDENTITY(1, 1),
-            nombre VARCHAR(100), 
-            categoria_conservacion VARCHAR(100) COLLATE Modern_Spanish_CI_AI NOT NULL, 
-            ubicacion VARCHAR(100) COLLATE Modern_Spanish_CI_AI NOT NULL, 
-            region VARCHAR(100) COLLATE Modern_Spanish_CI_AI NOT NULL, 
-            superficie INT, 
-            año_creacion SMALLINT, 
-            latitud VARCHAR(50),
-            longitud VARCHAR(50)
-        )
 
-        -- PASO 1: Importar Parques
-        INSERT INTO #Parques
-            SELECT *
-            FROM OPENROWSET(
-                'Microsoft.ACE.OLEDB.16.0',
-                'Excel 12.0;HDR=YES;IMEX=1;Database=E:\evanrepos\Parques-Nacionales\Importacion\AreasProtegidas\AreasProtegidas.xlsx',
-                'SELECT * FROM [Areas_Protegidas$]'
+            CREATE TABLE #TiposParque (
+	            id INT PRIMARY KEY IDENTITY(1,1),
+	            descripcion VARCHAR(100) 
             );
 
-        -- PASO 2: Guardar Tipos Parque en tabla temporal #TiposParque
-        CREATE TABLE #TiposParque (
-	        id INT PRIMARY KEY IDENTITY(1,1),
-	        descripcion VARCHAR(100) 
-        );
-        INSERT INTO #TiposParque
-            SELECT DISTINCT categoria_conservacion FROM #Parques
+            DECLARE @sql NVARCHAR(MAX);
+            DECLARE @path_file VARCHAR(MAX);
 
-        -- PASO 3: Usando ID de #TiposParque y un iterador, en un WHILE, UPSERT TiposParque usando el SP correspondiente 
-        DECLARE @i TINYINT = 1;
-        DECLARE @cant_tipos_parque TINYINT = (SELECT COUNT(1) FROM #TiposParque)
-        WHILE @i <= @cant_tipos_parque
-        BEGIN
+            SET @path_file = CONCAT(
+                @path_folder,
+                CASE WHEN RIGHT(@path_folder, 1) = '\' THEN '' ELSE '\' END,
+                @name_file
+            );
 
-            DECLARE @categoria_conservacion VARCHAR(100);
+            SET @sql = N'
+                INSERT INTO #TiposParque
+                SELECT *
+                FROM OPENROWSET(
+                    ''Microsoft.ACE.OLEDB.16.0'',
+                    ''Excel 12.0;HDR=YES;IMEX=1;Database=' + REPLACE(@path_file,'''','''''') + ''',
+                    ''SELECT DISTINCT [Categoría de conservación] FROM [' + REPLACE(@sheet_name,']',']]') + ']''
+                );';
 
-            SELECT @categoria_conservacion = descripcion FROM #TiposParque
-            WHERE id = @i
+            EXEC sp_executesql @sql;
+
+            DECLARE @i TINYINT = 1;
+            DECLARE @cant_tipos_parque TINYINT = (SELECT COUNT(1) FROM #TiposParque)
+            WHILE @i <= @cant_tipos_parque
+            BEGIN
+
+                DECLARE @categoria_conservacion VARCHAR(100);
+
+                SELECT @categoria_conservacion = descripcion FROM #TiposParque
+                WHERE id = @i
     
-            --PRINT @categoria_conservacion
-            EXEC Administracion.IngresarTiposDeParque @descripcion = @categoria_conservacion;
-            SET @i = @i + 1;
-        END
+                EXEC Administracion.IngresarTiposDeParque @descripcion = @categoria_conservacion;
+                SET @i = @i + 1;
+            END
         COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
@@ -317,37 +388,42 @@ GO
 -- =============================================
 
 CREATE OR ALTER PROCEDURE Administracion.GenerarProvincias
+(
+    @path_folder VARCHAR(MAX) = 'E:\evanrepos\Parques-Nacionales\Importacion\AreasProtegidas\',
+    @name_file   VARCHAR(255) = 'AreasProtegidas.xlsx',
+    @sheet_name  SYSNAME = 'Areas_Protegidas$'
+)
 AS
 BEGIN
+    SET NOCOUNT ON;
+
     BEGIN TRY
         BEGIN TRANSACTION;
-            CREATE TABLE #Parques (
-                id INT IDENTITY(1, 1),
-                nombre VARCHAR(100), 
-                categoria_conservacion VARCHAR(100) COLLATE Modern_Spanish_CI_AI NOT NULL, 
-                ubicacion VARCHAR(100) COLLATE Modern_Spanish_CI_AI NOT NULL, 
-                region VARCHAR(100) COLLATE Modern_Spanish_CI_AI NOT NULL, 
-                superficie INT, 
-                año_creacion SMALLINT, 
-                coordenadas VARCHAR(100)
-            )
-
-            -- PASO 1: Importar Parques
-            INSERT INTO #Parques
-                SELECT *
-                FROM OPENROWSET(
-                    'Microsoft.ACE.OLEDB.16.0',
-                    'Excel 12.0;HDR=YES;IMEX=1;Database=E:\evanrepos\Parques-Nacionales\Importacion\AreasProtegidas\AreasProtegidas.xlsx',
-                    'SELECT * FROM [Areas_Protegidas$]'
-                );
 
             CREATE TABLE #Provincias (
 	            id INT PRIMARY KEY IDENTITY(1,1),
 	            descripcion VARCHAR(100) 
             );
 
-            INSERT INTO #Provincias
-                SELECT DISTINCT ubicacion FROM #Parques
+            DECLARE @sql NVARCHAR(MAX);
+            DECLARE @path_file VARCHAR(MAX);
+
+            SET @path_file = CONCAT(
+                @path_folder,
+                CASE WHEN RIGHT(@path_folder, 1) = '\' THEN '' ELSE '\' END,
+                @name_file
+            );
+
+            SET @sql = N'
+                INSERT INTO #Provincias
+                SELECT *
+                FROM OPENROWSET(
+                    ''Microsoft.ACE.OLEDB.16.0'',
+                    ''Excel 12.0;HDR=YES;IMEX=1;Database=' + REPLACE(@path_file,'''','''''') + ''',
+                    ''SELECT DISTINCT [Ubicación] FROM [' + REPLACE(@sheet_name,']',']]') + ']''
+                );';
+
+            EXEC sp_executesql @sql;
 
             DECLARE @i TINYINT = 1;
             DECLARE @cant_provincias TINYINT = (SELECT COUNT(1) FROM #Provincias)
@@ -363,6 +439,7 @@ BEGIN
                 EXEC Administracion.IngresarProvincias @descripcion = @provincia;
                 SET @i = @i + 1;
             END
+            
         COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
@@ -385,47 +462,48 @@ GO
 -- =============================================
 
 CREATE OR ALTER PROCEDURE Administracion.GenerarParques
+(
+    @path_folder VARCHAR(MAX) = 'E:\evanrepos\Parques-Nacionales\Importacion\AreasProtegidas\',
+    @name_file   VARCHAR(255) = 'AreasProtegidas.xlsx',
+    @sheet_name  SYSNAME = 'Areas_Protegidas$'
+)
 AS
 BEGIN
+    SET NOCOUNT ON;
     BEGIN TRY
-        BEGIN TRANSACTION;       
-            CREATE TABLE #Parques (
-                id INT IDENTITY(1, 1),
-                nombre VARCHAR(100), 
-                categoria_conservacion VARCHAR(100) COLLATE Modern_Spanish_CI_AI NOT NULL, 
-                ubicacion VARCHAR(100) COLLATE Modern_Spanish_CI_AI NOT NULL, 
-                region VARCHAR(100) COLLATE Modern_Spanish_CI_AI NOT NULL, 
-                superficie INT, 
-                año_creacion SMALLINT, 
-                latitud VARCHAR(50),
-                longitud VARCHAR(50)
-            )
+        BEGIN TRANSACTION;
 
-            -- PASO 1: Importar Parques
-            INSERT INTO #Parques
-                SELECT 
-                [Nombre],
-                [Categoría de conservación],
-                [Ubicación],
-                [Eco región],
-                [Superficie (ha)],
-                [Año de creación],
-                LEFT(
-                    [Coordenadas],
-                    ISNULL(CHARINDEX('N ', [Coordenadas]), 0) +
-                    ISNULL(CHARINDEX('S ', [Coordenadas]), 0)
-                    ) AS [Latitud],
-                LTRIM(
-                    SUBSTRING([Coordenadas], 
-                    ISNULL(CHARINDEX('N ', [Coordenadas]), 0) +
-                    ISNULL(CHARINDEX('S ', [Coordenadas]), 0) + 1, 
-                    LEN([Coordenadas]))
-                    ) AS [Longitud]
+            CREATE TABLE #Parques
+            (
+                id INT IDENTITY(1,1),
+                nombre VARCHAR(100),
+                categoria_conservacion VARCHAR(100) COLLATE Modern_Spanish_CI_AI NOT NULL,
+                ubicacion VARCHAR(100) COLLATE Modern_Spanish_CI_AI NOT NULL,
+                region VARCHAR(100) COLLATE Modern_Spanish_CI_AI NOT NULL,
+                superficie INT,
+                año_creacion SMALLINT,
+                coordenadas VARCHAR(50)
+            );
+
+            DECLARE @sql NVARCHAR(MAX);
+            DECLARE @path_file VARCHAR(MAX);
+
+            SET @path_file = CONCAT(
+                @path_folder,
+                CASE WHEN RIGHT(@path_folder, 1) = '\' THEN '' ELSE '\' END,
+                @name_file
+            );
+
+            SET @sql = N'
+                INSERT INTO #Parques
+                SELECT *
                 FROM OPENROWSET(
-                    'Microsoft.ACE.OLEDB.16.0',
-                    'Excel 12.0;HDR=YES;IMEX=1;Database=E:\evanrepos\Parques-Nacionales\Importacion\AreasProtegidas\AreasProtegidas.xlsx',
-                    'SELECT * FROM [Areas_Protegidas$]'
-                );
+                    ''Microsoft.ACE.OLEDB.16.0'',
+                    ''Excel 12.0;HDR=YES;IMEX=1;Database=' + REPLACE(@path_file,'''','''''') + ''',
+                    ''SELECT * FROM [' + REPLACE(@sheet_name,']',']]') + ']''
+                );';
+
+            EXEC sp_executesql @sql;
 
             DECLARE @i TINYINT = 1;
             DECLARE @cant_parques TINYINT = (SELECT COUNT(1) FROM #Parques)
@@ -442,8 +520,19 @@ BEGIN
                 SELECT 
                     @tp_id = tp.id, 
                     @ap_id = ap.id, 
-                    @p_latitud = latitud, 
-                    @p_longitud = longitud, 
+                    @p_latitud = 
+                        REPLACE(REPLACE(LEFT(
+                        coordenadas,
+                        ISNULL(CHARINDEX('N ', coordenadas), 0) +
+                        ISNULL(CHARINDEX('S ', coordenadas), 0)
+                        ), ' ', ''), '´', ''''), 
+                    @p_longitud = 
+                        REPLACE(REPLACE(REPLACE(LTRIM(
+                        SUBSTRING([Coordenadas], 
+                        ISNULL(CHARINDEX('N ', [Coordenadas]), 0) +
+                        ISNULL(CHARINDEX('S ', [Coordenadas]), 0) + 1, 
+                        LEN([Coordenadas]))
+                        ), ' ', ''), '´', ''''), 'W', 'O'), 
                     @p_nombre = p.nombre, 
                     @p_superficie = superficie,
                     @año = p.año_creacion
@@ -454,8 +543,18 @@ BEGIN
                 ON p.categoria_conservacion = tp.descripcion
                 WHERE p.id = @i
 
+                SELECT @p_latitud = Administracion.PasarCoordenadasADecimal(@p_latitud),
+                    @p_longitud = Administracion.PasarCoordenadasADecimal(@p_longitud)
+
                 --PRINT @categoria_conservacion
-                EXEC Administracion.IngresarParques @tipo_parque_id = @tp_id, @provincia_id = @ap_id, @latitud = @p_latitud, @longitud = @p_longitud, @nombre = @p_nombre, @superficie = @p_superficie, @año_creacion = @año;
+                EXEC Administracion.IngresarParques 
+                    @tipo_parque_id = @tp_id, 
+                    @provincia_id = @ap_id, 
+                    @latitud = @p_latitud, 
+                    @longitud = @p_longitud, 
+                    @nombre = @p_nombre, 
+                    @superficie = @p_superficie, 
+                    @año_creacion = @año;
                 SET @i = @i + 1;
             END
         COMMIT TRANSACTION;
@@ -878,7 +977,6 @@ BEGIN
             DBCC CHECKIDENT('Administracion.Parques', 'RESEED', 0);
             DBCC CHECKIDENT('Administracion.TarifasDeArticulo', 'RESEED', 0);
             DBCC CHECKIDENT('Administracion.Ajustes', 'RESEED', 0);
-            DBCC CHECKIDENT('Administracion.PuntosDeVenta', 'RESEED', 0);
         END
         DECLARE @Mensaje NVARCHAR(MAX);
 

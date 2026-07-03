@@ -7,7 +7,7 @@
      - Iván Gonzalez Fernandez
 
    #####################################
-   #  OperacionesGuardaparques_Testing.sql  #
+   #  01_Operaciones_Guardaparques_Testing.sql  #
    #####################################
 
    Este script prueba todos los store procedures relacionados a los Guardaparques.

@@ -7,7 +7,7 @@
      - Iván Gonzalez Fernandez
 
    #####################################
-   #       OperacionesVentas.sql      #
+   #       00_Operaciones_Ventas.sql      #
    #####################################
    El objetivo de este script es definir todos los 
    store procedures relacionados con las
@@ -395,7 +395,7 @@ BEGIN
         IIF(@condicion8 = 1, @mensaje8, NULL),
         IIF(@condicion9 = 1, @mensaje9, NULL),
         IIF(@condicion10 = 1, @mensaje10, NULL),
-        IIF(@condicion11 = 1, @mensaje10, NULL)
+        IIF(@condicion11 = 1, @mensaje11, NULL)
         );
 
     --Si falló, muestra mensaje de error, no hace cambios.
@@ -427,6 +427,7 @@ CREATE OR ALTER PROCEDURE Ventas.InsertarTicketsDeVenta
     @f_generacion DATETIME = NULL,
     @tipo_fecha_id INT NULL,
     @total DECIMAL(12, 2) = 0,
+    @cant_visitantes INT NULL,
     @id INT = NULL OUTPUT
 AS
 BEGIN
@@ -488,13 +489,20 @@ BEGIN
         THEN 1 ELSE 0 END;
 
     DECLARE @mensaje8 VARCHAR(100) = 'La fecha de generación no puede ser posterior a la de hoy';
+
+    --9. Si la fecha de generación es posterior a la de hoy
+    DECLARE @condicion9 BIT = CASE 
+        WHEN @cant_visitantes < 1
+        THEN 1 ELSE 0 END;
+
+    DECLARE @mensaje9 VARCHAR(100) = 'La cantidad de visitantes no puede ser nula, ni menor a 1.';
         
     --9. Si ya existe una venta con el mismo punto de venta, el mismo parque y la misma fecha de generación
-    DECLARE @condicion9 BIT = CASE 
+    DECLARE @condicion10 BIT = CASE 
         WHEN EXISTS (SELECT 1 FROM Ventas.TicketsDeVenta WHERE punto_venta_id = @punto_venta_id AND parque_id = @parque_id AND f_generacion = @f_generacion)
         THEN 1 ELSE 0 END;
 
-    DECLARE @mensaje9 VARCHAR(100) = 'No puede ocurrir una venta en el mismo punto de venta en el mismo momento.';
+    DECLARE @mensaje10 VARCHAR(100) = 'No puede ocurrir una venta en el mismo punto de venta en el mismo momento.';
 
     --Generación del mensaje de error.
     DECLARE @mensajeDeError VARCHAR(MAX) = CONCAT_WS(CHAR(10),
@@ -506,7 +514,8 @@ BEGIN
         IIF(@condicion6 = 1, @mensaje6, NULL),
         IIF(@condicion7 = 1, @mensaje7, NULL),
         IIF(@condicion8 = 1, @mensaje8, NULL),
-        IIF(@condicion9 = 1, @mensaje9, NULL)
+        IIF(@condicion9 = 1, @mensaje9, NULL),
+        IIF(@condicion10 = 1, @mensaje10, NULL)
         );
 
     --Si falló, muestra mensaje de error, no hace cambios.
@@ -525,9 +534,9 @@ BEGIN
 
         BEGIN TRY
             INSERT INTO Ventas.TicketsDeVenta 
-                (punto_venta_id, parque_id, forma_pago_id, divisa_id, cotizacion, f_generacion, tipo_fecha_id, total) 
+                (punto_venta_id, parque_id, forma_pago_id, divisa_id, cotizacion, f_generacion, tipo_fecha_id, cant_visitantes, total) 
             VALUES
-                (@punto_venta_id, @parque_id, @forma_pago_id, @divisa_id, @cotizacion, ISNULL(@f_generacion, GETDATE()), @tipo_fecha_id, @total);
+                (@punto_venta_id, @parque_id, @forma_pago_id, @divisa_id, @cotizacion, ISNULL(@f_generacion, GETDATE()), @tipo_fecha_id, @cant_visitantes, @total);
 
             SET @id = SCOPE_IDENTITY();
         END TRY
@@ -687,12 +696,14 @@ BEGIN
                     SET @todo_ok = 1;
                 END
             END
+
             -- 1.3.2. Si el tipo de articulo es Actividad.
             ELSE IF @tipo_articulo_tarifa = 'A' AND @precio_unitario >= 0 AND @subtotal_calculado >= 0
             BEGIN
                 EXEC Ventas.InsertarActividad @tarifa_id, @ticket_id, @f_generacion, @precio_unitario
                 SET @todo_ok = 1;
             END
+
             -- 1.3.3. Si el tipo de articulo es Tour.
             ELSE IF @tipo_articulo_tarifa = 'T'
             BEGIN
@@ -721,6 +732,7 @@ BEGIN
                     SET @todo_ok = 1;
                 END
             END
+
             -- 1.4. Si el detalle de ticket está habilitado para la inserción
             IF @todo_ok = 1
             BEGIN
@@ -748,3 +760,114 @@ BEGIN
     END
 END;
 GO
+
+CREATE OR ALTER PROCEDURE Ventas.CancelarVenta (@ticket_id INT, @f_generacion DATETIME)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    --Condiciones de falla
+    --1. Si el número de ticket es nulo o no existe
+    DECLARE @condicion1 BIT = CASE 
+        WHEN @ticket_id IS NULL OR NOT EXISTS (SELECT 1 FROM Ventas.TicketsDeVenta WHERE id = @ticket_id)
+        THEN 1 ELSE 0 END;
+
+    DECLARE @mensaje1 VARCHAR(100) = 'El número de ticket no puede ser nulo, o inexistente.';
+
+    --2. Si el ticket ya fue anulado...
+    DECLARE @condicion2 BIT = CASE 
+        WHEN EXISTS (SELECT 1 FROM Ventas.TicketsDeVenta 
+                WHERE id = @ticket_id 
+                AND punto_venta_id IS NULL
+                AND parque_id IS NULL
+                AND forma_pago_id IS NULL
+                AND divisa_id IS NULL
+                AND cotizacion IS NULL
+                AND f_generacion IS NULL
+                AND tipo_fecha_id IS NULL
+                AND total IS NULL
+                AND cant_visitantes IS NULL
+                AND total IS NULL
+                AND cant_visitantes IS NULL
+            )
+        THEN 1 ELSE 0 END;
+
+    DECLARE @mensaje2 VARCHAR(100) = 'Este ticket ya fue anulado.';
+
+    --Generación del mensaje de error.
+    DECLARE @mensajeDeError VARCHAR(MAX) = CONCAT_WS(CHAR(10),
+        IIF(@condicion1 = 1, @mensaje1, NULL),
+        IIF(@condicion2 = 1, @mensaje2, NULL)
+        );
+
+    --Si falló, muestra mensaje de error, no hace cambios.
+    IF (LEN(@mensajeDeError) > 0)
+    BEGIN
+        RAISERROR(@mensajeDeError, 1, 1);
+    END;
+
+    --Si todo salió bien, se cancela la venta.
+    ELSE
+    BEGIN
+        BEGIN TRANSACTION
+            DECLARE @tourId INT;
+            DECLARE @cantCupos INT;
+            /*
+            + Pone el total y cantidad de visitantes del ticket en null, los subtotales de los detalles en null, 
+            los precios de las entradas y actividades generadas en null, de este modo, se garantiza que la venta 
+            no sea tenida en cuenta para los reportes finales.
+            + Al eliminar en ParticipaEnTour, necesita agregar la cantidad de cupos a la tabla Tours
+            primero.
+            */
+            UPDATE Ventas.TicketsDeVenta SET
+                punto_venta_id = NULL,
+                parque_id = NULL,
+                forma_pago_id = NULL,
+                divisa_id = NULL,
+                cotizacion = NULL,
+                f_generacion = NULL,
+                tipo_fecha_id = NULL,
+                total = NULL, 
+                cant_visitantes = NULL
+            WHERE id = @ticket_id
+
+            UPDATE Ventas.DetallesDeTicket SET 
+                tarifa_id = NULL,
+                tipo_visitante_id = NULL,
+                cantidad = NULL,
+                precio_ud = NULL,
+                subtotal = NULL
+            WHERE ticket_id = @ticket_id
+
+            UPDATE Ventas.Entradas SET 
+                tarifa_id = NULL,
+                tipo_fecha_id = NULL,
+                tipo_visitante_id = NULL,
+                f_visita = NULL,
+                precio = NULL
+            WHERE ticket_id = @ticket_id
+
+            UPDATE Ventas.Actividades SET
+                tarifa_id = NULL,
+                f_visita = NULL,
+                precio = NULL
+            WHERE ticket_id = @ticket_id
+
+            SELECT 
+                @tourId = tour_id,
+                @cantCupos = cantidad
+                FROM Ventas.ParticipaEnTour
+                WHERE ticket_id = @ticket_id
+
+            IF @tourId IS NOT NULL AND @cantCupos IS NOT NULL
+            BEGIN
+                UPDATE Ventas.Tours SET
+                    cant_cupos += @cantCupos
+                    WHERE id = @tourId
+
+                DELETE FROM Ventas.ParticipaEnTour
+                    WHERE ticket_id = @ticket_id
+            END
+        COMMIT TRANSACTION
+    END
+END

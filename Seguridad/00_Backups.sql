@@ -1,3 +1,19 @@
+/* #####################################
+   # Universidad Nacional de la Matanza#
+   #      Bases de Datos Aplicada      #
+   #####################################
+
+   Participan: 
+     - Iván Gonzalez Fernandez
+
+   #####################################
+   #       00_Backups.sql      #
+   #####################################
+   El objetivo de este script es definir los 
+   store procedures relacionados con la generación
+   de backups...
+*/
+
 USE master
 GO
 
@@ -14,7 +30,9 @@ BEGIN
     SET XACT_ABORT ON;
 
     DECLARE @fechaActual DATETIME = GETDATE();
-    DECLARE @pathBase VARCHAR(MAX) = CONCAT(@path, CAST(@fechaActual AS DATE));
+    DECLARE @hora CHAR(2) = RIGHT('0' + CONVERT(VARCHAR(2), DATEPART(HOUR, @fechaActual)), 2);
+    DECLARE @minuto CHAR(2) = RIGHT('0' + CONVERT(VARCHAR(2), DATEPART(MINUTE, @fechaActual)), 2);
+    DECLARE @pathBase VARCHAR(MAX) = CONCAT(@path, CAST(@fechaActual AS DATE), '-', @hora, '.', @minuto);
     DECLARE @pathBak VARCHAR(MAX) = CONCAT(@pathBase, '.bak'), 
         @pathMky VARCHAR(MAX) = CONCAT(@pathBase, '-masterkey.mky');
 
@@ -54,20 +72,3 @@ BEGIN
     EXEC sp_executesql @sql, N'@pathBak VARCHAR(MAX)', @pathBak = @pathBak;
 END
 GO
-
-/*
-EXEC GenerarBackup
-    @nombreBD = 'ParquesNacionales',
-    @contraseña = 'Contraseña';
-
-RESTORE DATABASE ParquesNacionales_Test
-FROM DISK = 'E:\evanrepos\Parques-Nacionales-Backups\PN-2026-06-30.bak'
-WITH MOVE 'ParquesNacionales' TO 'E:\Program Files\Microsoft SQL Server\MSSQL17.MSSQLSERVER\MSSQL\DATA\ParquesNacionales_Test.mdf',
-     MOVE 'ParquesNacionales_log' TO 'E:\Program Files\Microsoft SQL Server\MSSQL17.MSSQLSERVER\MSSQL\DATA\ParquesNacionales_Test_log.ldf',
-     REPLACE;
-DROP DATABASE ParquesNacionales_Test;
-*/
-
-EXEC RestaurarBackup 
-    @nombreBD = 'ParquesNacionales',
-    @pathBak = 'E:\evanrepos\Parques-Nacionales-Backups\PN-2026-07-02.bak';

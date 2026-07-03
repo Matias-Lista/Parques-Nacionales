@@ -7,7 +7,7 @@
      - Iván Gonzalez Fernandez
 
    #####################################
-   #     OperacionesGuias_Testing.sql      #
+   #     01_Operaciones_Guias_Testing.sql      #
    #####################################
 
    Este script prueba todos los store procedures relacionados a los Guías.

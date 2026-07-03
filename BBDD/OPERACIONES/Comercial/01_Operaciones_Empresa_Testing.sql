@@ -7,7 +7,7 @@
      - Iván Gonzalez Fernandez
  
    #####################################
-   #   OperacionesEmpresa_Testing.sql  #
+   #   01_Operaciones_Empresa_Testing.sql  #
    #####################################
  
    Este script prueba todos los store procedures relacionados a las Empresas.

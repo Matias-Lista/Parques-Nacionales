@@ -7,7 +7,7 @@
      - Iván Gonzalez Fernandez
 
    #####################################
-   #       OperacionesEmpresa.sql      #
+   #       00_Operaciones_Empresa.sql      #
    #####################################
    El objetivo de este script es definir todos los 
    store procedures relacionados con las

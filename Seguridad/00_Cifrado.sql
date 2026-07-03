@@ -1,3 +1,20 @@
+/* #####################################
+   # Universidad Nacional de la Matanza#
+   #      Bases de Datos Aplicada      #
+   #####################################
+
+   Participan: 
+     - Iván Gonzalez Fernandez
+
+   #####################################
+   #       00_Cifrado.sql      #
+   #####################################
+   El objetivo de este script es definir la
+   llave maestra, el certificado, y las llaves
+   simétricas para encriptar y desencriptar
+   datos sensibles...
+*/
+
 USE ParquesNacionales
 GO
 
