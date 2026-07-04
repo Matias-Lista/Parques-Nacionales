@@ -331,6 +331,3 @@ BEGIN
     );
 END
 GO
-
-ALTER TABLE Ventas.Actividades
-    ALTER COLUMN precio DECIMAL(10, 2) NULL

@@ -61,7 +61,7 @@ BEGIN
 
     --2. Si ya existe una forma de pago con la descripcion ingresada
     DECLARE @condicion2 BIT = CASE 
-        WHEN EXISTS (SELECT 1 FROM Administracion.FormasDePago WHERE ISNULL(descripcion, '') = ISNULL(@descripcion, ''))
+        WHEN EXISTS (SELECT 1 FROM Administracion.FormasDePago WHERE descripcion = @descripcion)
         THEN 1 ELSE 0 END;
 
     DECLARE @mensaje2 VARCHAR(100) = 'La forma de pago ingresada ya existe.';
@@ -103,7 +103,7 @@ BEGIN
 
     --2. Si ya existe una divisa con el código ISO o la descripcion ingresada
     DECLARE @condicion2 BIT = CASE 
-        WHEN EXISTS (SELECT 1 FROM Administracion.Divisas WHERE codigo_iso = @codigo_iso OR ISNULL(descripcion, '') = ISNULL(@descripcion, ''))
+        WHEN EXISTS (SELECT 1 FROM Administracion.Divisas WHERE codigo_iso = @codigo_iso OR descripcion = @descripcion)
         THEN 1 ELSE 0 END;
 
     DECLARE @mensaje2 VARCHAR(100) = 'La divisa ingresada ya existe.';
@@ -144,7 +144,7 @@ BEGIN
 
     --2. Si ya existe un tipo de fecha con la descripcion ingresada
     DECLARE @condicion2 BIT = CASE 
-        WHEN EXISTS (SELECT 1 FROM Administracion.TiposDeFecha WHERE ISNULL(descripcion, '') = ISNULL(@descripcion, ''))
+        WHEN EXISTS (SELECT 1 FROM Administracion.TiposDeFecha WHERE descripcion = @descripcion)
         THEN 1 ELSE 0 END;
 
     DECLARE @mensaje2 VARCHAR(100) = 'El tipo de fecha ingresado ya existe.';
@@ -239,7 +239,7 @@ BEGIN
 
     --2. Si ya existe un tipo de visitante con la descripcion ingresada
     DECLARE @condicion2 BIT = CASE 
-        WHEN EXISTS (SELECT 1 FROM Administracion.TiposDeVisitante WHERE ISNULL(descripcion, '') = ISNULL(@descripcion, ''))
+        WHEN EXISTS (SELECT 1 FROM Administracion.TiposDeVisitante WHERE descripcion = @descripcion)
         THEN 1 ELSE 0 END;
 
     DECLARE @mensaje2 VARCHAR(100) = 'El tipo de fecha ingresado ya existe.';
@@ -280,7 +280,7 @@ BEGIN
 
     --2. Si ya existe un tipo de parque con la descripcion ingresada
     DECLARE @condicion2 BIT = CASE 
-        WHEN EXISTS (SELECT 1 FROM Administracion.TiposDeParque WHERE ISNULL(descripcion, '') = ISNULL(@descripcion, ''))
+        WHEN EXISTS (SELECT 1 FROM Administracion.TiposDeParque WHERE descripcion = @descripcion)
         THEN 1 ELSE 0 END;
 
     DECLARE @mensaje2 VARCHAR(100) = 'El tipo de parque ingresado ya existe.';
@@ -321,7 +321,7 @@ BEGIN
 
     --2. Si ya existe una provincia con la descripcion ingresada
     DECLARE @condicion2 BIT = CASE 
-        WHEN EXISTS (SELECT 1 FROM Administracion.Provincias WHERE ISNULL(descripcion, '') = ISNULL(@descripcion, ''))
+        WHEN EXISTS (SELECT 1 FROM Administracion.Provincias WHERE descripcion = @descripcion)
         THEN 1 ELSE 0 END;
 
     DECLARE @mensaje2 VARCHAR(100) = 'La provincia ingresada ya existe.';
@@ -394,12 +394,14 @@ BEGIN
 
     DECLARE @mensaje5 VARCHAR(100) = 'El año de creación debe estar entre el 1500 y el año actual.';
         
-    --6. Si el nombre del parque y su provincia ya existen
+    --Condición de upsert
+    --6. Si las coordenadas del parque ingresado ya existen, el parque se dará por existente
     DECLARE @condicion6 BIT = CASE 
-        WHEN EXISTS (SELECT 1 FROM Administracion.Parques WHERE nombre = @nombre AND provincia_id = @provincia_id)
+        WHEN EXISTS (SELECT 1 FROM Administracion.Parques 
+            WHERE latitud = @latitud 
+                AND longitud = @longitud
+                AND provincia_id = @provincia_id)
         THEN 1 ELSE 0 END;
-
-    DECLARE @mensaje6 VARCHAR(100) = 'Ya existe un parque con esas características.';
 
     --Generación del mensaje de error.
     DECLARE @mensajeDeError VARCHAR(MAX) = CONCAT_WS(CHAR(10),
@@ -407,8 +409,7 @@ BEGIN
         IIF(@condicion2 = 1, @mensaje2, NULL),
         IIF(@condicion3 = 1, @mensaje3, NULL),
         IIF(@condicion4 = 1, @mensaje4, NULL),
-        IIF(@condicion5 = 1, @mensaje5, NULL),
-        IIF(@condicion6 = 1, @mensaje6, NULL)
+        IIF(@condicion5 = 1, @mensaje5, NULL)
         );
 
     --Si falló, muestra mensaje de error, no hace cambios.
@@ -416,6 +417,20 @@ BEGIN
     BEGIN
         RAISERROR(@mensajeDeError, 1, 1);
     END;
+
+    --Si el parque ingresado ya existe, se actualizan sus datos.
+    ELSE IF (@condicion6 = 1)
+    BEGIN
+        UPDATE Administracion.Parques SET 
+            tipo_parque_id = ISNULL(@tipo_parque_id, tipo_parque_id),
+            nombre = ISNULL(@nombre, nombre),
+            superficie_km_2 = ISNULL(@superficie, superficie_km_2), 
+            año_creacion = ISNULL(@año_creacion, año_creacion)
+        WHERE 
+            latitud = @latitud 
+            AND longitud = @longitud
+            AND provincia_id = @provincia_id 
+    END
 
     --Si todo salió bien, se inserta el parque.
     ELSE
@@ -599,7 +614,7 @@ BEGIN
 
     --2. Si ya existe un punto de venta con el parque y la descripción ingresada
     DECLARE @condicion2 BIT = CASE 
-        WHEN EXISTS (SELECT 1 FROM Administracion.PuntosDeVenta WHERE parque_id = @parque_id AND ISNULL(descripcion, '') = ISNULL(@descripcion, ''))
+        WHEN EXISTS (SELECT 1 FROM Administracion.PuntosDeVenta WHERE parque_id = @parque_id AND descripcion = @descripcion)
         THEN 1 ELSE 0 END;
 
     DECLARE @mensaje2 VARCHAR(100) = 'Ya existe un punto de venta con esas características.';
@@ -731,7 +746,7 @@ END
 GO
 
 CREATE OR ALTER PROCEDURE Administracion.ActualizarCotizacionDivisa
-    @divisa_id CHAR(3) = NULL,
+    @codigo_iso CHAR(3) = NULL,
     @f_consulta DATE = NULL
 AS
 BEGIN
@@ -740,15 +755,15 @@ BEGIN
     --Condiciones de falla
     --1. Si la divisa ingresada es la argentina
     DECLARE @condicion1 BIT = CASE 
-        WHEN @divisa_id = 'ARS'
+        WHEN @codigo_iso = 'ARS'
         THEN 1 ELSE 0 END;
 
     DECLARE @mensaje1 VARCHAR(100) = 'No puede calcularse el valor de la moneda argentina.';
 
     --2. Si la divisa ingresada es nula o inexistente
     DECLARE @condicion2 BIT = CASE 
-        WHEN @divisa_id IS NULL OR 
-            NOT EXISTS (SELECT 1 FROM Administracion.Divisas WHERE codigo_iso = @divisa_id)
+        WHEN @codigo_iso IS NULL OR 
+            NOT EXISTS (SELECT 1 FROM Administracion.Divisas WHERE codigo_iso = @codigo_iso)
         THEN 1 ELSE 0 END;
 
     DECLARE @mensaje2 VARCHAR(100) = 'El código ISO no puede ser nulos, o inexistente.';
@@ -776,37 +791,37 @@ BEGIN
     --Si todo salió bien, se actualiza la cotizacion de la divisa.
     ELSE
     BEGIN
-        DECLARE @fecha_actualizacion VARCHAR(MAX) = CAST(@f_consulta AS VARCHAR(MAX));
-        DECLARE @ResponseTable TABLE (JsonRaw VARCHAR(MAX));
-        DECLARE @link NVARCHAR(200) = CONCAT('https://api.frankfurter.dev/v2/rates?date=', @fecha_actualizacion ,'&base=', @divisa_id, '&quotes=ARS');
-        DECLARE @Object INT;
+        DECLARE @fechaActualizacion VARCHAR(MAX) = CAST(@f_consulta AS VARCHAR(MAX));
+        DECLARE @responseTable TABLE (json_raw VARCHAR(MAX));
+        DECLARE @link NVARCHAR(200) = CONCAT('https://api.frankfurter.dev/v2/rates?date=', @fechaActualizacion ,'&base=', @codigo_iso, '&quotes=ARS');
+        DECLARE @object INT;
         DECLARE @hr INT;
-        DECLARE @FinalJSON VARCHAR(MAX);
+        DECLARE @finalJSON VARCHAR(MAX);
 
-        EXEC @hr = sp_OACreate 'MSXML2.ServerXMLHTTP.6.0', @Object OUT;
-        EXEC @hr = sp_OAMethod @Object, 'open', NULL, 'GET', @link, 'false';
-        EXEC @hr = sp_OAMethod @Object, 'setRequestHeader', NULL, 'Accept', 'application/json';
-        EXEC @hr = sp_OAMethod @Object, 'setRequestHeader', NULL, 'User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
-        EXEC @hr = sp_OAMethod @Object, 'send';
+        EXEC @hr = sp_OACreate 'MSXML2.ServerXMLHTTP.6.0', @object OUT;
+        EXEC @hr = sp_OAMethod @object, 'open', NULL, 'GET', @link, 'false';
+        EXEC @hr = sp_OAMethod @object, 'setRequestHeader', NULL, 'Accept', 'application/json';
+        EXEC @hr = sp_OAMethod @object, 'setRequestHeader', NULL, 'User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
+        EXEC @hr = sp_OAMethod @object, 'send';
 
-        INSERT INTO @ResponseTable
-            EXEC sp_OAGetProperty @Object, 'responseText';
-            EXEC sp_OADestroy @Object;
-            SELECT TOP 1 @FinalJSON = JsonRaw FROM @ResponseTable;
+        INSERT INTO @responseTable
+            EXEC sp_OAGetProperty @object, 'responseText';
+            EXEC sp_OADestroy @object;
+            SELECT TOP 1 @finalJSON = json_raw FROM @responseTable;
 
         -- Si es un JSON real y válido, se procesa de forma nativa sin errores
         DECLARE @cotizacion DECIMAL(19, 6);
         SELECT 
             @cotizacion = CAST(cotizacion AS DECIMAL(19, 6))
-        FROM @ResponseTable
-        CROSS APPLY OPENJSON(JsonRaw)
+        FROM @responseTable
+        CROSS APPLY OPENJSON(json_raw)
         WITH (
             fecha  VARCHAR(10)  '$.date',
             base   VARCHAR(4)  '$.base',
             referida VARCHAR(4)  '$.quote',
             cotizacion  VARCHAR(20)  '$.rate'
         )
-        UPDATE Administracion.Divisas SET cotizacion = @cotizacion, f_actualizacion = @f_consulta WHERE codigo_iso = @divisa_id;
+        UPDATE Administracion.Divisas SET cotizacion = @cotizacion, f_actualizacion = @f_consulta WHERE codigo_iso = @codigo_iso;
     END
 END
 GO

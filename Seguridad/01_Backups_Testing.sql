@@ -20,20 +20,17 @@ GO
 SET NOCOUNT ON
 GO
 
-/*
 EXEC GenerarBackup
-    @nombreBD = 'ParquesNacionales',
-    @contraseña = 'Contraseña';
+    @nombreBD,
+    @contraseña;
 
 RESTORE DATABASE ParquesNacionales
-FROM DISK = 'E:\evanrepos\Parques-Nacionales-Backups\PN-2026-07-02-12.30.bak'
+FROM DISK = 'E:\evanrepos\Parques-Nacionales\Backups\PN-2026-07-02-23.40.bak'
 WITH MOVE 'ParquesNacionales' TO 'E:\Program Files\Microsoft SQL Server\MSSQL17.MSSQLSERVER\MSSQL\DATA\ParquesNacionales.mdf',
      MOVE 'ParquesNacionales_log' TO 'E:\Program Files\Microsoft SQL Server\MSSQL17.MSSQLSERVER\MSSQL\DATA\ParquesNacionales_log.ldf',
      REPLACE;
 DROP DATABASE ParquesNacionales_Test;
 
-*/
-
 EXEC RestaurarBackup 
-    @nombreBD = 'ParquesNacionales',
-    @pathBak = 'E:\evanrepos\Parques-Nacionales-Backups\PN-2026-07-02-23.40.bak';
+    @nombreBD,
+    @pathBak;

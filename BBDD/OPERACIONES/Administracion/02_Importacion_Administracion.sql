@@ -123,13 +123,13 @@ BEGIN
 
             --Llamar a API y guardar Divisas.
             DECLARE @link NVARCHAR(200) = 'https://api.frankfurter.dev/v1/currencies';
-            DECLARE @Object INT;
+            DECLARE @object INT;
             DECLARE @response VARCHAR(8000);
 
-            EXEC sp_OACreate 'MSXML2.ServerXMLHTTP.6.0', @Object OUT;
-            EXEC sp_OAMethod @Object, 'open', NULL, 'GET', @link, 'false';
-            EXEC sp_OAMethod @Object, 'send';
-            EXEC sp_OAGetProperty @Object, 'responseText', @response OUT;
+            EXEC sp_OACreate 'MSXML2.ServerXMLHTTP.6.0', @object OUT;
+            EXEC sp_OAMethod @object, 'open', NULL, 'GET', @link, 'false';
+            EXEC sp_OAMethod @object, 'send';
+            EXEC sp_OAGetProperty @object, 'responseText', @response OUT;
 
             DECLARE @divisas TABLE (
                 id INT IDENTITY(1, 1),
@@ -139,38 +139,38 @@ BEGIN
             INSERT INTO @divisas
                 SELECT [key], [value] FROM OPENJSON(@response)
             
-            DECLARE @indice_divisa INT;
-            DECLARE @cant_divisas INT;
-            DECLARE @id_divisa INT;
-            DECLARE @codigo_iso NVARCHAR(6);
+            DECLARE @indiceDivisa INT;
+            DECLARE @cantDivisas INT;
+            DECLARE @divisaId INT;
+            DECLARE @codigoIso NVARCHAR(6);
             DECLARE @descripcion VARCHAR(30);
 
             --Ingresar Divisas
-            SET @indice_divisa = 1;
-            SET @cant_divisas = (SELECT COUNT(1) FROM @divisas)
-            WHILE @indice_divisa <= @cant_divisas
+            SET @indiceDivisa = 1;
+            SET @cantDivisas = (SELECT COUNT(1) FROM @divisas)
+            WHILE @indiceDivisa <= @cantDivisas
             BEGIN
-                SELECT @codigo_iso = codigo_iso, @descripcion = descripcion FROM @divisas WHERE id = @indice_divisa
+                SELECT @codigoIso = codigo_iso, @descripcion = descripcion FROM @divisas WHERE id = @indiceDivisa
 
-                IF (NOT EXISTS (SELECT 1 FROM Administracion.Divisas WHERE codigo_iso = @codigo_iso))
-                    EXEC Administracion.IngresarDivisas @codigo_iso = @codigo_iso, @descripcion = @descripcion
+                IF (NOT EXISTS (SELECT 1 FROM Administracion.Divisas WHERE codigo_iso = @codigoIso))
+                    EXEC Administracion.IngresarDivisas @codigo_iso = @codigoIso, @descripcion = @descripcion
 
-                SET @indice_divisa = @indice_divisa + 1;
+                SET @indiceDivisa = @indiceDivisa + 1;
             END
 
             --Actualizar cotizaciones de Divisas.
-            SET @indice_divisa = 1;
-            SET @cant_divisas = (SELECT COUNT(1) FROM Administracion.Divisas);
-            WHILE @indice_divisa <= @cant_divisas
+            SET @indiceDivisa = 1;
+            SET @cantDivisas = (SELECT COUNT(1) FROM Administracion.Divisas);
+            WHILE @indiceDivisa <= @cantDivisas
             BEGIN
 
-                SELECT @id_divisa = id, @codigo_iso = codigo_iso FROM Administracion.Divisas WHERE id = @indice_divisa;
+                SELECT @divisaId = id, @codigoIso = codigo_iso FROM Administracion.Divisas WHERE id = @indiceDivisa;
                 DECLARE @fecha_hoy DATE = GETDATE();
 
-                IF @codigo_iso <> 'ARS'
-                    EXEC Administracion.ActualizarCotizacionDivisa @divisa_id = @codigo_iso, @f_consulta = @fecha_hoy;
+                IF @codigoIso <> 'ARS'
+                    EXEC Administracion.ActualizarCotizacionDivisa @codigo_iso = @codigoIso, @f_consulta = @fecha_hoy;
 
-                SET @indice_divisa = @indice_divisa + 1;
+                SET @indiceDivisa = @indiceDivisa + 1;
             END
         COMMIT TRANSACTION;
     END TRY
@@ -231,12 +231,12 @@ CREATE OR ALTER PROCEDURE Administracion.GenerarFeriados (@año SMALLINT)
 AS
 BEGIN
     DECLARE @link NVARCHAR(200) = CONCAT('https://api.argentinadatos.com/v1/feriados/', CAST(@año AS VARCHAR));
-    DECLARE @Object INT;
+    DECLARE @object INT;
     DECLARE @response VARCHAR(8000);
-    EXEC sp_OACreate 'MSXML2.ServerXMLHTTP.6.0', @Object OUT;
-    EXEC sp_OAMethod @Object, 'open', NULL, 'GET', @link, 'false';
-    EXEC sp_OAMethod @Object, 'send';
-    EXEC sp_OAGetProperty @Object, 'responseText', @response OUT;
+    EXEC sp_OACreate 'MSXML2.ServerXMLHTTP.6.0', @object OUT;
+    EXEC sp_OAMethod @object, 'open', NULL, 'GET', @link, 'false';
+    EXEC sp_OAMethod @object, 'send';
+    EXEC sp_OAGetProperty @object, 'responseText', @response OUT;
 
     DECLARE @feriados TABLE (
         id INT IDENTITY(1, 1),
@@ -253,9 +253,9 @@ BEGIN
                 nombre VARCHAR(50) '$.nombre'
             )
 
-    DECLARE @indice_feriado INT = 1;
-    DECLARE @cant_feriados INT = (SELECT COUNT(1) FROM @feriados);
-    WHILE @indice_feriado <= @cant_feriados
+    DECLARE @indiceFeriado INT = 1;
+    DECLARE @cantFeriados INT = (SELECT COUNT(1) FROM @feriados);
+    WHILE @indiceFeriado <= @cantFeriados
     BEGIN
         DECLARE @mes TINYINT;
         DECLARE @dia TINYINT;
@@ -265,12 +265,12 @@ BEGIN
             @dia = DAY(fecha),
             @nombre = nombre
             FROM @feriados
-            WHERE id = @indice_feriado
+            WHERE id = @indiceFeriado
         EXEC Administracion.IngresarFeriados 
             @mes = @mes, 
             @dia = @dia, 
             @nombre = @nombre
-        SET @indice_feriado += 1
+        SET @indiceFeriado += 1
     END
 END
 GO
@@ -330,13 +330,13 @@ BEGIN
 
             CREATE TABLE #TiposParque (
 	            id INT PRIMARY KEY IDENTITY(1,1),
-	            descripcion VARCHAR(100) 
+	            descripcion VARCHAR(100) COLLATE Modern_Spanish_CI_AI
             );
 
             DECLARE @sql NVARCHAR(MAX);
-            DECLARE @path_file VARCHAR(MAX);
+            DECLARE @pathFile VARCHAR(MAX);
 
-            SET @path_file = CONCAT(
+            SET @pathFile = CONCAT(
                 @path_folder,
                 CASE WHEN RIGHT(@path_folder, 1) = '\' THEN '' ELSE '\' END,
                 @name_file
@@ -347,25 +347,26 @@ BEGIN
                 SELECT *
                 FROM OPENROWSET(
                     ''Microsoft.ACE.OLEDB.16.0'',
-                    ''Excel 12.0;HDR=YES;IMEX=1;Database=' + REPLACE(@path_file,'''','''''') + ''',
+                    ''Excel 12.0;HDR=YES;IMEX=1;Database=' + REPLACE(@pathFile,'''','''''') + ''',
                     ''SELECT DISTINCT [Categoría de conservación] FROM [' + REPLACE(@sheet_name,']',']]') + ']''
                 );';
 
             EXEC sp_executesql @sql;
 
-            DECLARE @i TINYINT = 1;
-            DECLARE @cant_tipos_parque TINYINT = (SELECT COUNT(1) FROM #TiposParque)
-            WHILE @i <= @cant_tipos_parque
+            DECLARE @indiceTipo TINYINT = 1;
+            DECLARE @cantTiposParque TINYINT = (SELECT COUNT(1) FROM #TiposParque);
+            WHILE @indiceTipo <= @cantTiposParque
             BEGIN
 
-                DECLARE @categoria_conservacion VARCHAR(100);
+                DECLARE @categoria VARCHAR(100);
 
-                SELECT @categoria_conservacion = descripcion FROM #TiposParque
-                WHERE id = @i
+                SELECT @categoria = descripcion FROM #TiposParque
+                WHERE id = @indiceTipo
     
-                EXEC Administracion.IngresarTiposDeParque @descripcion = @categoria_conservacion;
-                SET @i = @i + 1;
+                EXEC Administracion.IngresarTiposDeParque @descripcion = @categoria;
+                SET @indiceTipo = @indiceTipo + 1;
             END
+            DROP TABLE #TiposParque
         COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
@@ -402,13 +403,13 @@ BEGIN
 
             CREATE TABLE #Provincias (
 	            id INT PRIMARY KEY IDENTITY(1,1),
-	            descripcion VARCHAR(100) 
+	            descripcion VARCHAR(100) COLLATE Modern_Spanish_CI_AI
             );
 
             DECLARE @sql NVARCHAR(MAX);
-            DECLARE @path_file VARCHAR(MAX);
+            DECLARE @pathFile VARCHAR(MAX);
 
-            SET @path_file = CONCAT(
+            SET @pathFile = CONCAT(
                 @path_folder,
                 CASE WHEN RIGHT(@path_folder, 1) = '\' THEN '' ELSE '\' END,
                 @name_file
@@ -419,27 +420,27 @@ BEGIN
                 SELECT *
                 FROM OPENROWSET(
                     ''Microsoft.ACE.OLEDB.16.0'',
-                    ''Excel 12.0;HDR=YES;IMEX=1;Database=' + REPLACE(@path_file,'''','''''') + ''',
+                    ''Excel 12.0;HDR=YES;IMEX=1;Database=' + REPLACE(@pathFile,'''','''''') + ''',
                     ''SELECT DISTINCT [Ubicación] FROM [' + REPLACE(@sheet_name,']',']]') + ']''
                 );';
 
             EXEC sp_executesql @sql;
 
-            DECLARE @i TINYINT = 1;
-            DECLARE @cant_provincias TINYINT = (SELECT COUNT(1) FROM #Provincias)
-            WHILE @i <= @cant_provincias
+            DECLARE @indiceProvincia TINYINT = 1;
+            DECLARE @cantProvincias TINYINT = (SELECT COUNT(1) FROM #Provincias)
+            WHILE @indiceProvincia <= @cantProvincias
             BEGIN
 
                 DECLARE @provincia VARCHAR(100);
 
                 SELECT @provincia = descripcion FROM #Provincias
-                WHERE id = @i
+                WHERE id = @indiceProvincia
     
                 --PRINT @categoria_conservacion
                 EXEC Administracion.IngresarProvincias @descripcion = @provincia;
-                SET @i = @i + 1;
+                SET @indiceProvincia = @indiceProvincia + 1;
             END
-            
+            DROP TABLE #Provincias
         COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
@@ -477,18 +478,18 @@ BEGIN
             (
                 id INT IDENTITY(1,1),
                 nombre VARCHAR(100),
-                categoria_conservacion VARCHAR(100) COLLATE Modern_Spanish_CI_AI NOT NULL,
-                ubicacion VARCHAR(100) COLLATE Modern_Spanish_CI_AI NOT NULL,
-                region VARCHAR(100) COLLATE Modern_Spanish_CI_AI NOT NULL,
+                categoria_conservacion VARCHAR(100) COLLATE Modern_Spanish_CI_AI,
+                ubicacion VARCHAR(100) COLLATE Modern_Spanish_CI_AI,
+                region VARCHAR(100) COLLATE Modern_Spanish_CI_AI,
                 superficie INT,
                 año_creacion SMALLINT,
                 coordenadas VARCHAR(50)
             );
 
             DECLARE @sql NVARCHAR(MAX);
-            DECLARE @path_file VARCHAR(MAX);
+            DECLARE @pathFile VARCHAR(MAX);
 
-            SET @path_file = CONCAT(
+            SET @pathFile = CONCAT(
                 @path_folder,
                 CASE WHEN RIGHT(@path_folder, 1) = '\' THEN '' ELSE '\' END,
                 @name_file
@@ -499,42 +500,42 @@ BEGIN
                 SELECT *
                 FROM OPENROWSET(
                     ''Microsoft.ACE.OLEDB.16.0'',
-                    ''Excel 12.0;HDR=YES;IMEX=1;Database=' + REPLACE(@path_file,'''','''''') + ''',
+                    ''Excel 12.0;HDR=YES;IMEX=1;Database=' + REPLACE(@pathFile,'''','''''') + ''',
                     ''SELECT * FROM [' + REPLACE(@sheet_name,']',']]') + ']''
                 );';
 
             EXEC sp_executesql @sql;
 
             DECLARE @i TINYINT = 1;
-            DECLARE @cant_parques TINYINT = (SELECT COUNT(1) FROM #Parques)
-            WHILE @i <= @cant_parques
+            DECLARE @cantParques TINYINT = (SELECT COUNT(1) FROM #Parques)
+            WHILE @i <= @cantParques
             BEGIN
-                DECLARE @tp_id TINYINT;
-                DECLARE @ap_id TINYINT;
-                DECLARE @p_latitud VARCHAR(50);
-                DECLARE @p_longitud VARCHAR(50);
-                DECLARE @p_nombre VARCHAR(100);
-                DECLARE @p_superficie INT;
+                DECLARE @tpId TINYINT;
+                DECLARE @apId TINYINT;
+                DECLARE @pLatitud VARCHAR(50);
+                DECLARE @pLongitud VARCHAR(50);
+                DECLARE @pNombre VARCHAR(100);
+                DECLARE @pSuperficie INT;
                 DECLARE @año SMALLINT;
 
                 SELECT 
-                    @tp_id = tp.id, 
-                    @ap_id = ap.id, 
-                    @p_latitud = 
+                    @tpId = tp.id, 
+                    @apId = ap.id, 
+                    @pLatitud = 
                         REPLACE(REPLACE(LEFT(
                         coordenadas,
                         ISNULL(CHARINDEX('N ', coordenadas), 0) +
                         ISNULL(CHARINDEX('S ', coordenadas), 0)
                         ), ' ', ''), '´', ''''), 
-                    @p_longitud = 
+                    @pLongitud = 
                         REPLACE(REPLACE(REPLACE(LTRIM(
                         SUBSTRING([Coordenadas], 
                         ISNULL(CHARINDEX('N ', [Coordenadas]), 0) +
                         ISNULL(CHARINDEX('S ', [Coordenadas]), 0) + 1, 
                         LEN([Coordenadas]))
                         ), ' ', ''), '´', ''''), 'W', 'O'), 
-                    @p_nombre = p.nombre, 
-                    @p_superficie = superficie,
+                    @pNombre = p.nombre, 
+                    @pSuperficie = superficie,
                     @año = p.año_creacion
                 FROM #Parques p 
                 INNER JOIN Administracion.Provincias ap 
@@ -543,20 +544,21 @@ BEGIN
                 ON p.categoria_conservacion = tp.descripcion
                 WHERE p.id = @i
 
-                SELECT @p_latitud = Administracion.PasarCoordenadasADecimal(@p_latitud),
-                    @p_longitud = Administracion.PasarCoordenadasADecimal(@p_longitud)
+                SELECT @pLatitud = Administracion.PasarCoordenadasADecimal(@pLatitud),
+                    @pLongitud = Administracion.PasarCoordenadasADecimal(@pLongitud)
 
                 --PRINT @categoria_conservacion
                 EXEC Administracion.IngresarParques 
-                    @tipo_parque_id = @tp_id, 
-                    @provincia_id = @ap_id, 
-                    @latitud = @p_latitud, 
-                    @longitud = @p_longitud, 
-                    @nombre = @p_nombre, 
-                    @superficie = @p_superficie, 
+                    @tipo_parque_id = @tpId, 
+                    @provincia_id = @apId, 
+                    @latitud = @pLatitud, 
+                    @longitud = @pLongitud, 
+                    @nombre = @pNombre, 
+                    @superficie = @pSuperficie, 
                     @año_creacion = @año;
                 SET @i = @i + 1;
             END
+            DROP TABLE #Parques
         COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
@@ -583,19 +585,19 @@ AS
 BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
-            DECLARE @Parque TINYINT = 1;
-            DECLARE @cant_parques TINYINT = (SELECT COUNT(1) FROM Administracion.Parques);
-            WHILE @Parque <= @cant_parques
+            DECLARE @parque TINYINT = 1;
+            DECLARE @cantParques TINYINT = (SELECT COUNT(1) FROM Administracion.Parques);
+            WHILE @parque <= @cantParques
             BEGIN
-                DECLARE @punto_venta TINYINT = 1;
-                DECLARE @cant_puntos_venta TINYINT = (SELECT 1 + ABS(CHECKSUM(NEWID())) % 6);
-                WHILE @punto_venta <= @cant_puntos_venta
+                DECLARE @puntoVenta TINYINT = 1;
+                DECLARE @cantPuntosVenta TINYINT = (SELECT 1 + ABS(CHECKSUM(NEWID())) % 6);
+                WHILE @puntoVenta <= @cantPuntosVenta
                 BEGIN
-                    DECLARE @desc VARCHAR(MAX) = (SELECT 'Parque: ' + CAST(@Parque AS VARCHAR(MAX)) + '- Puesto: ' + CAST(@punto_venta AS VARCHAR(MAX)));
-                    EXEC Administracion.IngresarPuntosDeVenta @parque_id = @Parque, @descripcion = @desc
-                    SET @punto_venta = @punto_venta + 1
+                    DECLARE @desc VARCHAR(MAX) = (SELECT 'Parque: ' + CAST(@parque AS VARCHAR(MAX)) + '- Puesto: ' + CAST(@puntoVenta AS VARCHAR(MAX)));
+                    EXEC Administracion.IngresarPuntosDeVenta @parque_id = @parque, @descripcion = @desc
+                    SET @puntoVenta = @puntoVenta + 1
                 END
-                SET @Parque = @Parque + 1;
+                SET @parque = @parque + 1;
             END
         COMMIT TRANSACTION;
     END TRY
@@ -646,39 +648,39 @@ BEGIN
                 ('Residentes Provinciales',	'7 Días', 28000.00,	28000.00,	28000.00)
 
             --ENTRADAS (GENERABLE)
-            DECLARE @Parque INT = 1;
-            DECLARE @cant_parques INT = (SELECT COUNT(1) FROM Administracion.Parques);
-            WHILE @Parque <= @cant_parques
+            DECLARE @parque INT = 1;
+            DECLARE @cantParques INT = (SELECT COUNT(1) FROM Administracion.Parques);
+            WHILE @parque <= @cantParques
             BEGIN
                 --Porcentaje variable por parque
                 DECLARE @porcentaje SMALLINT = CHECKSUM(NEWID()) % 20;
 
                 --Fijacion tarifas por tipo de entrada, aplicando porcentaje predefinido para el parque.
-                DECLARE @tarifa_diaria DECIMAL(10, 2) = (SELECT DISTINCT AVG(promedio) OVER (PARTITION BY tipo_entrada) AS tarifa_base FROM #Entradas
+                DECLARE @tarifaDiaria DECIMAL(10, 2) = (SELECT DISTINCT AVG(promedio) OVER (PARTITION BY tipo_entrada) AS tarifa_base FROM #Entradas
                 WHERE tipo_entrada LIKE '%diaria%');
-                SELECT @tarifa_diaria = @tarifa_diaria + (@tarifa_diaria * @porcentaje / 100);
+                SELECT @tarifaDiaria = @tarifaDiaria + (@tarifaDiaria * @porcentaje / 100);
 
-                DECLARE @tarifa_3dias DECIMAL(10, 2) = (SELECT DISTINCT AVG(promedio) OVER (PARTITION BY tipo_entrada) AS tarifa_base FROM #Entradas
+                DECLARE @tarifa3Dias DECIMAL(10, 2) = (SELECT DISTINCT AVG(promedio) OVER (PARTITION BY tipo_entrada) AS tarifa_base FROM #Entradas
                 WHERE tipo_entrada LIKE '%3 días%');
-                SELECT  @tarifa_3dias = @tarifa_3dias + (@tarifa_3dias * @porcentaje / 100);
+                SELECT  @tarifa3Dias = @tarifa3Dias + (@tarifa3Dias * @porcentaje / 100);
 
-                DECLARE @tarifa_7dias DECIMAL(10, 2) = (SELECT DISTINCT AVG(promedio) OVER (PARTITION BY tipo_entrada) AS tarifa_base FROM #Entradas
+                DECLARE @tarifa7Dias DECIMAL(10, 2) = (SELECT DISTINCT AVG(promedio) OVER (PARTITION BY tipo_entrada) AS tarifa_base FROM #Entradas
                 WHERE tipo_entrada LIKE '%7 días%');
-                SELECT  @tarifa_7dias = @tarifa_7dias + (@tarifa_7dias * @porcentaje / 100);
+                SELECT  @tarifa7Dias = @tarifa7Dias + (@tarifa7Dias * @porcentaje / 100);
 
                 EXEC Administracion.IngresarTarifasDeArticulo
-                    @parque_id = @Parque, @tipo_articulo = 'E',
-                    @descripcion = 'Entrada Diaria', @precio = @tarifa_diaria
+                    @parque_id = @parque, @tipo_articulo = 'E',
+                    @descripcion = 'Entrada Diaria', @precio = @tarifaDiaria
     
                 EXEC Administracion.IngresarTarifasDeArticulo
-                    @parque_id = @Parque, @tipo_articulo = 'E',
-                    @descripcion = 'Entrada 3 días', @precio = @tarifa_3dias
+                    @parque_id = @parque, @tipo_articulo = 'E',
+                    @descripcion = 'Entrada 3 días', @precio = @tarifa3Dias
     
                 EXEC Administracion.IngresarTarifasDeArticulo
-                    @parque_id = @Parque, @tipo_articulo = 'E',
-                    @descripcion = 'Entrada 7 días', @precio = @tarifa_7dias
+                    @parque_id = @parque, @tipo_articulo = 'E',
+                    @descripcion = 'Entrada 7 días', @precio = @tarifa7Dias
 
-                SET @Parque = @Parque + 1;
+                SET @parque = @parque + 1;
             END
         COMMIT TRANSACTION;
     END TRY
@@ -704,12 +706,12 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
         -- Catálogo de actividades
-        DECLARE @Actividades TABLE (
+        DECLARE @actividades TABLE (
             descripcion VARCHAR(100),
             precio_base DECIMAL(10,2)
         );
 
-        INSERT INTO @Actividades VALUES
+        INSERT INTO @actividades VALUES
         ('Avistaje de aves', 3500),
         ('Sendero interpretativo', 2500),
         ('Recorrido botanico', 3000),
@@ -721,31 +723,31 @@ BEGIN
         ('Sendero autoguiado', 2000),
         ('Recorrido cultural', 3000);
 
-        DECLARE @Parque INT = 1;
-        DECLARE @cant_parques INT = (SELECT COUNT(1) FROM Administracion.Parques);
-        WHILE @Parque <= @cant_parques
+        DECLARE @parque INT = 1;
+        DECLARE @cantParques INT = (SELECT COUNT(1) FROM Administracion.Parques);
+        WHILE @parque <= @cantParques
         BEGIN
-            DECLARE @Tarifa INT = 1;
-            DECLARE @cant_act INT = (SELECT COUNT(1) FROM @Actividades)
-            WHILE @Tarifa <= RAND(CHECKSUM(NEWID())) * @cant_act
+            DECLARE @tarifa INT = 1;
+            DECLARE @cantAct INT = (SELECT COUNT(1) FROM @actividades)
+            WHILE @tarifa <= RAND(CHECKSUM(NEWID())) * @cantAct
             BEGIN
-                DECLARE @Actividad VARCHAR(100);
-                DECLARE @PrecioActividad DECIMAL(10,2);
+                DECLARE @actividad VARCHAR(100);
+                DECLARE @precioActividad DECIMAL(10,2);
 
                 SELECT TOP 1
-                    @Actividad = CONCAT(descripcion, ' - Variante ', @Tarifa),
-                    @PrecioActividad = precio_base + (ABS(CHECKSUM(NEWID())) % 3000)
-                FROM @Actividades
+                    @actividad = CONCAT(descripcion, ' - Variante ', @tarifa),
+                    @precioActividad = precio_base + (ABS(CHECKSUM(NEWID())) % 3000)
+                FROM @actividades
                 ORDER BY NEWID();
 
                 EXEC Administracion.IngresarTarifasDeArticulo
-                    @parque_id = @Parque,
+                    @parque_id = @parque,
                     @tipo_articulo = 'A',
-                    @descripcion = @Actividad,
-                    @precio = @PrecioActividad;
-                SET @Tarifa += 1;
+                    @descripcion = @actividad,
+                    @precio = @precioActividad;
+                SET @tarifa += 1;
             END
-            SET @Parque += 1;
+            SET @parque += 1;
         END
         COMMIT TRANSACTION;
     END TRY
@@ -771,14 +773,14 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
             -- Catálogo de tours
-            DECLARE @Tours TABLE (
+            DECLARE @tours TABLE (
                 descripcion VARCHAR(100),
                 duracion INT,
                 cupo INT,
                 precio_base DECIMAL(10,2)
             );
 
-            INSERT INTO @Tours VALUES
+            INSERT INTO @tours VALUES
             ('Tour de trekking', 180, 15, 15000),
             ('Tour de navegacion', 120, 20, 12000),
             ('Safari fotografico', 240, 12, 18000),
@@ -790,37 +792,37 @@ BEGIN
             ('Circuito de lagunas', 180, 20, 14500),
             ('Trekking de montaña', 240, 15, 19000);
 
-            DECLARE @Parque INT = 1;
-            DECLARE @cant_parques INT = (SELECT COUNT(1) FROM Administracion.Parques);
-            WHILE @Parque <= @cant_parques
+            DECLARE @parque INT = 1;
+            DECLARE @cantParques INT = (SELECT COUNT(1) FROM Administracion.Parques);
+            WHILE @parque <= @cantParques
             BEGIN
-                DECLARE @Tarifa INT = 1;
-                DECLARE @cant_tour INT = (SELECT COUNT(1) FROM @Tours)
-                WHILE @Tarifa <= RAND(CHECKSUM(NEWID())) * @cant_tour
+                DECLARE @tarifa INT = 1;
+                DECLARE @cant_tour INT = (SELECT COUNT(1) FROM @tours)
+                WHILE @tarifa <= RAND(CHECKSUM(NEWID())) * @cant_tour
                 BEGIN
-                    DECLARE @Tour VARCHAR(100);
-                    DECLARE @Duracion INT;
-                    DECLARE @Cupo INT;
-                    DECLARE @PrecioTour DECIMAL(10,2);
+                    DECLARE @tour VARCHAR(100);
+                    DECLARE @duracion INT;
+                    DECLARE @cupo INT;
+                    DECLARE @precioTour DECIMAL(10,2);
 
                     SELECT TOP 1
-                        @Tour = CONCAT(descripcion, ' - Variante ', @Tarifa),
-                        @Duracion = duracion,
-                        @Cupo = cupo + (ABS(CHECKSUM(NEWID())) % 15),
-                        @PrecioTour = precio_base + (ABS(CHECKSUM(NEWID())) % 5000)
-                    FROM @Tours
+                        @tour = CONCAT(descripcion, ' - Variante ', @tarifa),
+                        @duracion = duracion,
+                        @cupo = cupo + (ABS(CHECKSUM(NEWID())) % 15),
+                        @precioTour = precio_base + (ABS(CHECKSUM(NEWID())) % 5000)
+                    FROM @tours
                     ORDER BY NEWID();
 
                     EXEC Administracion.IngresarTarifasDeArticulo
-                        @parque_id = @Parque,
+                        @parque_id = @parque,
                         @tipo_articulo = 'T',
-                        @descripcion = @Tour,
-                        @duracion = @Duracion,
-                        @cupo = @Cupo,
-                        @precio = @PrecioTour;
-                    SET @Tarifa += 1;
+                        @descripcion = @tour,
+                        @duracion = @duracion,
+                        @cupo = @cupo,
+                        @precio = @precioTour;
+                    SET @tarifa += 1;
                 END
-                SET @Parque += 1;
+                SET @parque += 1;
             END         
         COMMIT TRANSACTION;
     END TRY
@@ -848,9 +850,9 @@ AS
 BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
-            DECLARE @Parque INT = 1;
-            DECLARE @cant_parques INT = (SELECT COUNT(1) FROM Administracion.Parques);
-            WHILE @Parque <= @cant_parques
+            DECLARE @parque INT = 1;
+            DECLARE @cantParques INT = (SELECT COUNT(1) FROM Administracion.Parques);
+            WHILE @parque <= @cantParques
             BEGIN
                 --Diferencial del porcentaje variable por parque
                 DECLARE @diferencial SMALLINT = (SELECT CHECKSUM(NEWID()) % 10);
@@ -859,57 +861,57 @@ BEGIN
                 --Fijacion tarifas por tipo de entrada, aplicando porcentaje predefinido para el parque.
                 SET @porcentaje = 0 + @diferencial;
                 EXEC Administracion.IngresarAjustes
-                    @parque_id = @Parque, @tipo_articulo = 'E',
+                    @parque_id = @parque, @tipo_articulo = 'E',
                     @tipo_ajuste = 'F', @descripcion = 'Día hábil', @porcentaje = @diferencial;
 
                 SET @porcentaje = 15 + @diferencial;
                 EXEC Administracion.IngresarAjustes
-                    @parque_id = @Parque, @tipo_articulo = 'E',
+                    @parque_id = @parque, @tipo_articulo = 'E',
                     @tipo_ajuste = 'F', @descripcion = 'Fin de semana', @porcentaje = @porcentaje;
     
 
                 SET @porcentaje = 30 + @diferencial;
                 EXEC Administracion.IngresarAjustes
-                    @parque_id = @Parque, @tipo_articulo = 'E',
+                    @parque_id = @parque, @tipo_articulo = 'E',
                     @tipo_ajuste = 'F', @descripcion = 'Feriado nacional', @porcentaje = @porcentaje;
     
 
                 SET @porcentaje = 20 + @diferencial;
                 EXEC Administracion.IngresarAjustes
-                    @parque_id = @Parque, @tipo_articulo = 'E',
+                    @parque_id = @parque, @tipo_articulo = 'E',
                     @tipo_ajuste = 'F', @descripcion = 'Feriado provincial', @porcentaje = @porcentaje;
     
 
                 SET @porcentaje = 0 + @diferencial;
                 EXEC Administracion.IngresarAjustes
-                    @parque_id = @Parque, @tipo_articulo = 'E',
+                    @parque_id = @parque, @tipo_articulo = 'E',
                     @tipo_ajuste = 'V', @descripcion = 'Residente Nacional', @porcentaje = @porcentaje;
     
 
                 SET @porcentaje = -20 + @diferencial;
                 EXEC Administracion.IngresarAjustes
-                    @parque_id = @Parque, @tipo_articulo = 'E',
+                    @parque_id = @parque, @tipo_articulo = 'E',
                     @tipo_ajuste = 'V', @descripcion = 'Residente Provincial', @porcentaje = @porcentaje;
     
 
                 SET @porcentaje = -50 + @diferencial;
                 EXEC Administracion.IngresarAjustes
-                    @parque_id = @Parque, @tipo_articulo = 'E',
+                    @parque_id = @parque, @tipo_articulo = 'E',
                     @tipo_ajuste = 'V', @descripcion = 'Jubilado', @porcentaje = @porcentaje;
     
 
                 SET @porcentaje = -40 + @diferencial;
                 EXEC Administracion.IngresarAjustes
-                    @parque_id = @Parque, @tipo_articulo = 'E',
+                    @parque_id = @parque, @tipo_articulo = 'E',
                     @tipo_ajuste = 'V', @descripcion = 'Estudiante', @porcentaje = @porcentaje;
     
 
                 SET @porcentaje = 60 + @diferencial;
                 EXEC Administracion.IngresarAjustes
-                    @parque_id = @Parque, @tipo_articulo = 'E',
+                    @parque_id = @parque, @tipo_articulo = 'E',
                     @tipo_ajuste = 'V', @descripcion = 'Extranjero', @porcentaje = @porcentaje;
 
-                SET @Parque = @Parque + 1;
+                SET @parque = @parque + 1;
             END
         COMMIT TRANSACTION;
     END TRY
@@ -932,7 +934,7 @@ GO
 -- CARGA
 -- =============================================
 
-CREATE OR ALTER PROCEDURE Administracion.GenerarDatos
+CREATE OR ALTER PROCEDURE Administracion.GenerarDatos (@año_feriados INT = 2026)
 AS
 BEGIN
     BEGIN TRY
@@ -943,7 +945,7 @@ BEGIN
         
             EXEC Administracion.GenerarTiposDeFecha
 
-            EXEC Administracion.GenerarFeriados @año = 2026
+            EXEC Administracion.GenerarFeriados @año_feriados
         
             EXEC Administracion.GenerarTiposDeVisitante
         
@@ -992,5 +994,3 @@ BEGIN
     END CATCH;
 END
 GO
-
-EXEC Administracion.GenerarDatos

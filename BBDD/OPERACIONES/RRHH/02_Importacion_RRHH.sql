@@ -675,5 +675,3 @@ BEGIN
     END CATCH;
 END
 GO
-
-EXEC RRHH.GenerarDatos

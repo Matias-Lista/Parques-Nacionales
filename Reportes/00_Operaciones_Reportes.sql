@@ -153,7 +153,7 @@ END
 GO
 
 --Conversión a XML.
-CREATE OR ALTER PROCEDURE Administracion.GenerarReporteIngresosPorRubroXML
+CREATE OR ALTER PROCEDURE Reportes.GenerarReporteIngresosPorRubroXML
 AS
 BEGIN
     SELECT 
@@ -314,7 +314,7 @@ END
 GO
 
 --Conversión a XML.
-CREATE OR ALTER PROCEDURE Administracion.GenerarReporteConcesionesPorParqueXML
+CREATE OR ALTER PROCEDURE Reportes.GenerarReporteConcesionesPorParqueXML
 AS
 BEGIN
     SELECT 

@@ -32,7 +32,7 @@ GO
 EXEC Reportes.GenerarInformeIngresosPorRubro
 GO
 --Conversión a XML.
-EXEC Administracion.GenerarReporteIngresosPorRubroXML
+EXEC Reportes.GenerarReporteIngresosPorRubroXML
 GO
 --3. Deudores.
 --Cuotas pendientes de pago por concesion
@@ -44,5 +44,5 @@ GO
 --5. Parques y concesiones.
 --Consulta
 EXEC Reportes.GenerarInformeConcesionesPorParque
-EXEC Administracion.GenerarReporteConcesionesPorParqueXML
+EXEC Reportes.GenerarReporteConcesionesPorParqueXML
 GO

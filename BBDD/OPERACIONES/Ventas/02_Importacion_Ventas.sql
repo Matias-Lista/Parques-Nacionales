@@ -340,7 +340,7 @@ BEGIN
 
                     IF @fActualizacion <> @fIteradora
                     BEGIN
-                        EXEC Administracion.ActualizarCotizacionDivisa @divisa_id = @codigoISO, @f_consulta = @fIteradora;
+                        EXEC Administracion.ActualizarCotizacionDivisa @codigo_iso = @codigoISO, @f_consulta = @fIteradora;
                         SELECT @cotizacion = cotizacion, @fActualizacion = f_actualizacion FROM Administracion.Divisas WHERE id = @divisaId;
                     END
                 END
@@ -513,15 +513,21 @@ GO
 -- CARGA
 -- =============================================
 
-CREATE OR ALTER PROCEDURE Ventas.GenerarDatos (@fecha_inicio DATE, @fecha_fin DATE = @fecha_inicio, @hora_apertura TIME = '07:00:00', @hora_cierre TIME = '19:00:00')
+CREATE OR ALTER PROCEDURE Ventas.GenerarDatos (
+    @fecha_inicio DATE, 
+    @fecha_fin DATE = @fecha_inicio, 
+    @hora_apertura_parques TIME = '07:00:00',
+    @hora_apertura_tours TIME = '08:00:00',
+    @hora_cierre_parques TIME = '19:00:00',
+    @hora_cierre_tours TIME = '17:00:00')
 AS
 BEGIN
     BEGIN TRY
         SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
         BEGIN TRANSACTION;
-            EXEC Ventas.GenerarTours @fecha_inicio, @fecha_fin, '08:00:00', '17:00:00'
+            EXEC Ventas.GenerarTours @fecha_inicio, @fecha_fin, @hora_apertura_tours, @hora_cierre_tours
 
-            EXEC Ventas.GenerarTicketsDeVenta @fecha_inicio, @fecha_fin, @hora_apertura, @hora_cierre 
+            EXEC Ventas.GenerarTicketsDeVenta @fecha_inicio, @fecha_fin, @hora_apertura_parques, @hora_cierre_parques 
             
         COMMIT TRANSACTION;
     END TRY
@@ -555,9 +561,3 @@ BEGIN
     END CATCH;
 END
 GO
-/*
-DECLARE @fecha_inicio DATETIME = DATEADD(YEAR, -2, GETDATE()),
-    @fecha_fin DATETIME = DATEADD(DAY, -1, GETDATE());
-EXEC Ventas.GenerarDatos @fecha_inicio = @fecha_inicio, @fecha_fin = @fecha_fin
-*/
-EXEC Ventas.GenerarDatos @fecha_inicio = '2025-01-01'--, @fecha_fin = '2025-02-01'

@@ -34,16 +34,35 @@ GO
 EXECUTE AS USER = 'usuario_ventas';
 
 PRINT 'Debe funcionar';
-EXEC Ventas.ListarVentas;      -- reemplazar por un SP tuyo
+EXEC Ventas.InsertarTicketsDeVenta    
+        @punto_venta_id = 1,
+        @parque_id = 1,
+        @forma_pago_id = 1,
+        @divisa_id = 1,
+        @cotizacion = 1.00000,
+        @f_generacion = '2026-07-01 10:00:00', -- Fecha pasada (válida)
+        @total = 0, -- Empieza en cero, sumará con los detalles
+        @cant_visitantes = 2,
+        @id = @TestTicketId OUTPUT;
 
 PRINT 'Debe funcionar';
-EXEC Reportes.ReporteVentas;   -- reemplazar
+EXEC Reportes.GenerarInformeVisitas;   
 
 PRINT 'Debe fallar';
-EXEC RRHH.CrearGuia;           -- reemplazar
+EXEC RRHH.CrearGuia
+    @cuil = 20111111112,
+    @nombre = 'Juan',
+    @apellido = 'Perez',
+    @fecha_nacimiento = '1990-01-01',
+    @id = @guia1 OUTPUT;           
 
 PRINT 'Debe fallar';
-EXEC Comercial.RegistrarEmpresa;
+EXEC Comercial.RegistrarEmpresa
+    @cuit = 20123456781,
+    @razon_social = 'Empresa Turismo SRL',
+    @direccion_legal = 'Av. Siempre Viva 123, CABA',
+    @comienzo_actividad = '2010-05-01',
+    @id = @empresa1 OUTPUT;
 
 REVERT;
 GO
@@ -51,16 +70,32 @@ GO
 EXECUTE AS USER = 'usuario_rrhh';
 
 PRINT 'Debe funcionar';
-EXEC RRHH.CrearGuardaparque;
-
-PRINT 'Debe funcionar';
-EXEC Reportes.ReporteRRHH;
+EXEC RRHH.CrearGuia
+    @cuil = 20111111112,
+    @nombre = 'Juan',
+    @apellido = 'Perez',
+    @fecha_nacimiento = '1990-01-01',
+    @id = @guia1 OUTPUT;
 
 PRINT 'Debe fallar';
-EXEC Ventas.RegistrarVenta;
+EXEC Ventas.InsertarTicketsDeVenta    
+        @punto_venta_id = 1,
+        @parque_id = 1,
+        @forma_pago_id = 1,
+        @divisa_id = 1,
+        @cotizacion = 1.00000,
+        @f_generacion = '2026-07-02 10:00:00', -- Fecha pasada (válida)
+        @total = 0, -- Empieza en cero, sumará con los detalles
+        @cant_visitantes = 2,
+        @id = @TestTicketId OUTPUT;
 
 PRINT 'Debe fallar';
-EXEC Comercial.RegistrarEmpresa;
+EXEC Comercial.RegistrarEmpresa
+    @cuit = 20123456781,
+    @razon_social = 'Empresa Turismo SRL',
+    @direccion_legal = 'Av. Siempre Viva 123, CABA',
+    @comienzo_actividad = '2010-05-01',
+    @id = @empresa1 OUTPUT;
 
 REVERT;
 GO
@@ -68,16 +103,35 @@ GO
 EXECUTE AS USER = 'usuario_comercial';
 
 PRINT 'Debe funcionar';
-EXEC Comercial.RegistrarEmpresa;
+EXEC Comercial.RegistrarEmpresa
+    @cuit = 20123456781,
+    @razon_social = 'Empresa Turismo SRL',
+    @direccion_legal = 'Av. Siempre Viva 123, CABA',
+    @comienzo_actividad = '2010-05-01',
+    @id = @empresa1 OUTPUT;
 
 PRINT 'Debe funcionar';
-EXEC Reportes.ReporteConcesiones;
+EXEC Reportes.GenerarInformeConcesionesMorosas;
 
 PRINT 'Debe fallar';
-EXEC RRHH.CrearGuardaparque;
+EXEC RRHH.CrearGuardaparque
+    @cuil = 20111111112,
+    @nombre = 'Juan',
+    @apellido = 'Perez',
+    @fecha_nacimiento = '1990-01-01',
+    @id = @guardaparque1 OUTPUT;
 
 PRINT 'Debe fallar';
-EXEC Ventas.RegistrarVenta;
+EXEC Ventas.InsertarTicketsDeVenta    
+        @punto_venta_id = 1,
+        @parque_id = 1,
+        @forma_pago_id = 1,
+        @divisa_id = 1,
+        @cotizacion = 1.00000,
+        @f_generacion = '2026-07-02 10:00:00', -- Fecha pasada (válida)
+        @total = 0, -- Empieza en cero, sumará con los detalles
+        @cant_visitantes = 2,
+        @id = @TestTicketId OUTPUT;
 
 REVERT;
 GO
@@ -85,16 +139,35 @@ GO
 EXECUTE AS USER = 'usuario_consultas';
 
 PRINT 'Debe funcionar';
-EXEC Reportes.ReporteVentas;
+EXEC Reportes.GenerarInformeIngresosPorRubro;
 
 PRINT 'Debe fallar';
-EXEC Comercial.RegistrarEmpresa;
+EXEC Comercial.RegistrarEmpresa
+    @cuit = 27987654321,
+    @razon_social = 'Concesiones del Sur SA',
+    @direccion_legal = 'Ruta 40 km 50, Bariloche',
+    @comienzo_actividad = '2015-08-20',
+    @id = @empresa2 OUTPUT;
 
 PRINT 'Debe fallar';
-EXEC RRHH.CrearGuardaparque;
+EXEC RRHH.CrearGuardaparque
+    @cuil = 20111111112,
+    @nombre = 'Juan',
+    @apellido = 'Perez',
+    @fecha_nacimiento = '1990-01-01',
+    @id = @guardaparque1 OUTPUT;
 
 PRINT 'Debe fallar';
-EXEC Ventas.RegistrarVenta;
+EXEC Ventas.InsertarTicketsDeVenta    
+        @punto_venta_id = 1,
+        @parque_id = 1,
+        @forma_pago_id = 1,
+        @divisa_id = 1,
+        @cotizacion = 1.00000,
+        @f_generacion = '2026-07-02 10:00:00', -- Fecha pasada (válida)
+        @total = 0, -- Empieza en cero, sumará con los detalles
+        @cant_visitantes = 2,
+        @id = @TestTicketId OUTPUT;
 
 REVERT;
 GO
@@ -108,10 +181,24 @@ PRINT 'Debe funcionar';
 EXEC Administracion.GenerarDivisas;
 
 PRINT 'Debe fallar';
-EXEC Ventas.RegistrarVenta;
+EXEC Ventas.InsertarTicketsDeVenta    
+        @punto_venta_id = 1,
+        @parque_id = 1,
+        @forma_pago_id = 1,
+        @divisa_id = 1,
+        @cotizacion = 1.00000,
+        @f_generacion = '2026-07-02 10:00:00', -- Fecha pasada (válida)
+        @total = 0, -- Empieza en cero, sumará con los detalles
+        @cant_visitantes = 2,
+        @id = @TestTicketId OUTPUT;
 
 PRINT 'Debe fallar';
-EXEC Comercial.RegistrarEmpresa;
+EXEC Comercial.RegistrarEmpresa
+    @cuit = 27987654321,
+    @razon_social = 'Concesiones del Sur SA',
+    @direccion_legal = 'Ruta 40 km 50, Bariloche',
+    @comienzo_actividad = '2015-08-20',
+    @id = @empresa2 OUTPUT;
 
 REVERT;
 GO

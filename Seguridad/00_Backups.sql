@@ -21,9 +21,9 @@ SET NOCOUNT ON
 GO
 
 CREATE OR ALTER PROCEDURE GenerarBackup (
-    @path VARCHAR(MAX) = 'E:\evanrepos\Parques-Nacionales-Backups\PN-',
-    @nombreBD SYSNAME,
-    @contraseña VARCHAR(MAX)
+    @path VARCHAR(MAX) = 'E:\evanrepos\Parques-Nacionales\Backups\PN-',
+    @nombreBD SYSNAME = 'ParquesNacionales',
+    @contraseña VARCHAR(MAX) = 'Contraseña'
     )
 AS
 BEGIN
@@ -60,8 +60,8 @@ END
 GO
 
 CREATE OR ALTER PROCEDURE RestaurarBackup (
-    @nombreBD SYSNAME,
-    @pathBak VARCHAR(MAX)
+    @nombreBD SYSNAME = 'ParquesNacionales',
+    @pathBak VARCHAR(MAX) = 'E:\evanrepos\Parques-Nacionales\Backups\PN-2026-07-02-23.40.bak'
     )
 AS
 BEGIN

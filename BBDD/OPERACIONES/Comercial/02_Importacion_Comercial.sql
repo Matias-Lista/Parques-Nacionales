@@ -634,5 +634,3 @@ BEGIN
     END CATCH;
 END
 GO
-
-EXEC Comercial.GenerarDatos

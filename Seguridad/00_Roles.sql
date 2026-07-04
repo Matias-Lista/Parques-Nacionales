@@ -21,12 +21,18 @@ GO
 ADMINISTRADOR
 =========================================================*/
 
+CREATE ROLE rol_administrador;
+GO
+
 ALTER ROLE db_owner ADD MEMBER rol_administrador;
 
 
 /*=========================================================
 CONSULTAS
 =========================================================*/
+
+CREATE ROLE rol_consultas;
+GO
 
 GRANT EXECUTE ON SCHEMA::Reportes TO rol_consultas;
 
@@ -45,6 +51,9 @@ DENY EXECUTE ON SCHEMA::Ventas TO rol_consultas;
 VENTAS
 =========================================================*/
 
+CREATE ROLE rol_ventas;
+GO
+
 GRANT EXECUTE ON SCHEMA::Ventas TO rol_ventas;
 GRANT EXECUTE ON SCHEMA::Reportes TO rol_ventas;
 
@@ -59,6 +68,9 @@ DENY EXECUTE ON SCHEMA::Administracion TO rol_ventas;
 /*=========================================================
 RRHH
 =========================================================*/
+
+CREATE ROLE rol_rrhh;
+GO
 
 GRANT EXECUTE ON SCHEMA::RRHH TO rol_rrhh;
 GRANT EXECUTE ON SCHEMA::Reportes TO rol_rrhh;
@@ -75,6 +87,9 @@ DENY EXECUTE ON SCHEMA::Administracion TO rol_rrhh;
 COMERCIAL
 =========================================================*/
 
+CREATE ROLE rol_comercial;
+GO
+
 GRANT EXECUTE ON SCHEMA::Comercial TO rol_comercial;
 GRANT EXECUTE ON SCHEMA::Reportes TO rol_comercial;
 
@@ -89,6 +104,9 @@ DENY EXECUTE ON SCHEMA::Administracion TO rol_comercial;
 /*=========================================================
 IMPORTADOR
 =========================================================*/
+
+CREATE ROLE rol_importador;
+GO
 
 GRANT EXECUTE
 ON OBJECT::Administracion.GenerarDivisas
